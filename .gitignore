@@ -49,3 +49,7 @@ google-services.json
 GoogleService-Info.plist
 play-store-key.json
 *.keystore
+-e 
+# Environment files
+*.env
+*.env.*
