@@ -243,50 +243,56 @@ export default function TasksScreen() {
   // Load data
   // ----------------------------------------------------------
 
-  const loadGroups = useCallback(async () => {
+  const loadData = useCallback(async () => {
     try {
       const g = await getGroups();
       setGroups(g);
-      if (g.length > 0 && !selectedGroupId) {
-        setSelectedGroupId(g[0].id);
+
+      const gid = selectedGroupId ?? g[0]?.id ?? null;
+      if (gid) {
+        setSelectedGroupId(gid);
+        const t = await getTasks(gid);
+        setTasks(t);
+      } else {
+        setTasks([]);
       }
     } catch (err: any) {
-      Alert.alert('Error', err.message);
-    }
-  }, [selectedGroupId]);
-
-  const loadTasks = useCallback(async () => {
-    if (!selectedGroupId) {
-      setTasks([]);
-      setLoading(false);
-      return;
-    }
-    try {
-      const t = await getTasks(selectedGroupId);
-      setTasks(t);
-    } catch (err: any) {
-      Alert.alert('Error', err.message);
+      console.error('Failed to load tasks:', err);
     } finally {
       setLoading(false);
     }
   }, [selectedGroupId]);
 
   useEffect(() => {
-    loadGroups();
-  }, [loadGroups]);
+    loadData();
+  }, []);
 
+  const loadTasks = useCallback(async () => {
+    if (!selectedGroupId) return;
+    try {
+      const t = await getTasks(selectedGroupId);
+      setTasks(t);
+    } catch (err: any) {
+      console.error('Failed to load tasks:', err);
+    }
+  }, [selectedGroupId]);
+
+  // Reload when group changes
   useEffect(() => {
     if (selectedGroupId) {
       setLoading(true);
-      loadTasks();
+      getTasks(selectedGroupId)
+        .then((t) => setTasks(t))
+        .catch((err) => console.error('Failed to load tasks:', err))
+        .finally(() => setLoading(false));
     }
-  }, [selectedGroupId, loadTasks]);
+  }, [selectedGroupId]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await loadTasks();
+    await loadData();
     setRefreshing(false);
-  }, [loadTasks]);
+  }, [loadData]);
 
   // ----------------------------------------------------------
   // Members list (for filter)

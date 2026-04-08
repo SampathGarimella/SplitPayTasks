@@ -261,33 +261,39 @@ export default function ExpensesScreen() {
             All
           </Text>
         </TouchableOpacity>
-        {EXPENSE_CATEGORIES.map((cat) => (
-          <TouchableOpacity
-            key={cat.value}
-            style={[
-              styles.filterChip,
-              activeFilter === cat.value && { backgroundColor: cat.color + '1A' },
-            ]}
-            onPress={() =>
-              setActiveFilter((prev) => (prev === cat.value ? 'all' : cat.value))
-            }
-          >
-            <Ionicons
-              name={cat.icon as keyof typeof Ionicons.glyphMap}
-              size={14}
-              color={activeFilter === cat.value ? cat.color : COLORS.mutedForeground}
-              style={{ marginRight: 4 }}
-            />
-            <Text
+        {EXPENSE_CATEGORIES.map((cat) => {
+          const isActive = activeFilter === cat.value;
+          return (
+            <TouchableOpacity
+              key={cat.value}
               style={[
-                styles.filterChipText,
-                activeFilter === cat.value && { color: cat.color },
+                styles.filterChip,
+                isActive && {
+                  backgroundColor: cat.color + '14',
+                  borderColor: cat.color + '40',
+                },
               ]}
+              onPress={() =>
+                setActiveFilter((prev) => (prev === cat.value ? 'all' : cat.value))
+              }
             >
-              {cat.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
+              <Ionicons
+                name={cat.icon as keyof typeof Ionicons.glyphMap}
+                size={14}
+                color={isActive ? cat.color : COLORS.mutedForeground}
+                style={{ marginRight: 6 }}
+              />
+              <Text
+                style={[
+                  styles.filterChipText,
+                  isActive && { color: cat.color, fontWeight: '600' },
+                ]}
+              >
+                {cat.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
       </ScrollView>
 
       {/* Expense list */}
@@ -363,18 +369,22 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: 12,
     flexDirection: 'row',
+    alignItems: 'center',
   },
   filterChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
     backgroundColor: COLORS.secondary,
     marginRight: 8,
+    borderWidth: 1,
+    borderColor: 'transparent',
   },
   filterChipActive: {
-    backgroundColor: COLORS.blue + '1A',
+    backgroundColor: COLORS.blue + '14',
+    borderColor: COLORS.blue + '40',
   },
   filterChipText: {
     fontSize: 13,
@@ -383,6 +393,7 @@ const styles = StyleSheet.create({
   },
   filterChipTextActive: {
     color: COLORS.blue,
+    fontWeight: '600',
   },
   list: {
     paddingHorizontal: 16,
