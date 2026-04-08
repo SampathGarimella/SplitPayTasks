@@ -1,18 +1,19 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
+  TouchableWithoutFeedback,
   Alert,
   Switch,
-  Platform,
+  Animated,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import Constants from 'expo-constants';
-import { COLORS, AVATAR_COLORS } from '../../config/constants';
+import { useTheme } from '../../hooks/useTheme';
+import { getColors, AVATAR_COLORS } from '../../config/constants';
 import { Avatar, Button, Input, Card } from '../../components/common';
 import { useAuth } from '../../hooks/useAuth';
 
@@ -22,6 +23,8 @@ import { useAuth } from '../../hooks/useAuth';
 
 export default function ProfileScreen() {
   const { user, signOut, updateProfile, loading } = useAuth();
+  const { isDark, toggleTheme } = useTheme();
+  const colors = getColors(isDark);
 
   const [fullName, setFullName] = useState(user?.full_name ?? '');
   const [selectedColor, setSelectedColor] = useState(user?.color ?? AVATAR_COLORS[0]);
@@ -35,6 +38,42 @@ export default function ProfileScreen() {
   const [notifTaskOverdue, setNotifTaskOverdue] = useState(true);
 
   const appVersion = Constants.expoConfig?.version ?? '1.0.0';
+
+  // Avatar fluid touch animations
+  const avatarScaleAnim = useRef(new Animated.Value(1)).current;
+  const avatarOpacityAnim = useRef(new Animated.Value(1)).current;
+
+  const handleAvatarPressIn = useCallback(() => {
+    Animated.parallel([
+      Animated.spring(avatarScaleAnim, {
+        toValue: 0.92,
+        useNativeDriver: true,
+        speed: 50,
+        bounciness: 4,
+      }),
+      Animated.timing(avatarOpacityAnim, {
+        toValue: 0.85,
+        duration: 100,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [avatarScaleAnim, avatarOpacityAnim]);
+
+  const handleAvatarPressOut = useCallback(() => {
+    Animated.parallel([
+      Animated.spring(avatarScaleAnim, {
+        toValue: 1,
+        useNativeDriver: true,
+        speed: 50,
+        bounciness: 6,
+      }),
+      Animated.timing(avatarOpacityAnim, {
+        toValue: 1,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [avatarScaleAnim, avatarOpacityAnim]);
 
   // ----------------------------------------------------------
   // Avatar image picker
@@ -140,26 +179,45 @@ export default function ProfileScreen() {
   if (!user) return null;
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+    <ScrollView style={[styles.container, { backgroundColor: colors.background }]} contentContainerStyle={styles.contentContainer}>
       {/* Avatar section */}
       <View style={styles.avatarSection}>
-        <TouchableOpacity onPress={handlePickAvatar} style={styles.avatarContainer}>
-          <Avatar
-            name={user.full_name}
-            color={selectedColor}
-            size="large"
-            imageUrl={user.avatar_url}
-          />
-          <View style={styles.avatarEditBadge}>
-            <Ionicons name="camera" size={14} color="#fff" />
-          </View>
-        </TouchableOpacity>
+        <TouchableWithoutFeedback
+          onPress={handlePickAvatar}
+          onPressIn={handleAvatarPressIn}
+          onPressOut={handleAvatarPressOut}
+        >
+          <Animated.View
+            style={[
+              styles.avatarContainer,
+              {
+                width: 64,
+                height: 64,
+                borderRadius: 32,
+                alignItems: 'center',
+                justifyContent: 'center',
+                transform: [{ scale: avatarScaleAnim }],
+                opacity: avatarOpacityAnim,
+              },
+            ]}
+          >
+            <Avatar
+              name={user.full_name}
+              color={selectedColor}
+              size="large"
+              imageUrl={user.avatar_url}
+            />
+            <View style={[styles.avatarEditBadge, { backgroundColor: colors.blue, borderColor: colors.background }]}>
+              <Ionicons name="camera" size={14} color="#fff" />
+            </View>
+          </Animated.View>
+        </TouchableWithoutFeedback>
       </View>
 
       {/* Name section */}
       <Card style={styles.card}>
-        <View style={styles.fieldRow}>
-          <Text style={styles.fieldLabel}>Full Name</Text>
+        <View style={[styles.fieldRow, { borderBottomColor: colors.border }]}>
+          <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>Full Name</Text>
           {editingName ? (
             <View style={styles.editNameRow}>
               <Input
@@ -169,117 +227,140 @@ export default function ProfileScreen() {
                 autoCapitalize="words"
               />
               <View style={styles.editNameActions}>
-                <TouchableOpacity
+                <TouchableWithoutFeedback
                   onPress={() => {
                     setFullName(user.full_name);
                     setEditingName(false);
                   }}
-                  style={styles.editNameButton}
                 >
-                  <Text style={styles.cancelText}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={handleSaveName} style={styles.editNameButton}>
-                  <Text style={styles.saveText}>Save</Text>
-                </TouchableOpacity>
+                  <View style={styles.editNameButton}>
+                    <Text style={[styles.cancelText, { color: colors.mutedForeground }]}>Cancel</Text>
+                  </View>
+                </TouchableWithoutFeedback>
+                <TouchableWithoutFeedback onPress={handleSaveName}>
+                  <View style={styles.editNameButton}>
+                    <Text style={[styles.saveText, { color: colors.blue }]}>Save</Text>
+                  </View>
+                </TouchableWithoutFeedback>
               </View>
             </View>
           ) : (
-            <TouchableOpacity
-              style={styles.editableRow}
-              onPress={() => setEditingName(true)}
-            >
-              <Text style={styles.fieldValue}>{user.full_name}</Text>
-              <Ionicons name="pencil-outline" size={16} color={COLORS.mutedForeground} />
-            </TouchableOpacity>
+            <TouchableWithoutFeedback onPress={() => setEditingName(true)}>
+              <View style={styles.editableRow}>
+                <Text style={[styles.fieldValue, { color: colors.primary }]}>{user.full_name}</Text>
+                <Ionicons name="pencil-outline" size={16} color={colors.mutedForeground} />
+              </View>
+            </TouchableWithoutFeedback>
           )}
         </View>
 
         {/* Email */}
         <View style={[styles.fieldRow, styles.fieldRowLast]}>
-          <Text style={styles.fieldLabel}>Email</Text>
+          <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>Email</Text>
           <View style={styles.editableRow}>
-            <Text style={[styles.fieldValue, styles.fieldValueMuted]}>{user.email}</Text>
-            <Ionicons name="lock-closed-outline" size={14} color={COLORS.mutedForeground} />
+            <Text style={[styles.fieldValue, styles.fieldValueMuted, { color: colors.mutedForeground }]}>{user.email}</Text>
+            <Ionicons name="lock-closed-outline" size={14} color={colors.mutedForeground} />
           </View>
         </View>
       </Card>
 
       {/* Color picker */}
       <Card style={styles.card}>
-        <Text style={styles.cardTitle}>Avatar Color</Text>
-        <Text style={styles.cardSubtitle}>Choose your display color</Text>
+        <Text style={[styles.cardTitle, { color: colors.primary }]}>Avatar Color</Text>
+        <Text style={[styles.cardSubtitle, { color: colors.mutedForeground }]}>Choose your display color</Text>
         <View style={styles.colorGrid}>
           {AVATAR_COLORS.map((color) => (
-            <TouchableOpacity
+            <TouchableWithoutFeedback
               key={color}
-              style={[
-                styles.colorSwatch,
-                { backgroundColor: color },
-                selectedColor === color && styles.colorSwatchSelected,
-              ]}
               onPress={() => handleColorSelect(color)}
             >
-              {selectedColor === color && (
-                <Ionicons name="checkmark" size={18} color="#fff" />
-              )}
-            </TouchableOpacity>
+              <View
+                style={[
+                  styles.colorSwatch,
+                  { backgroundColor: color },
+                  selectedColor === color && [styles.colorSwatchSelected, { borderColor: colors.primary }],
+                ]}
+              >
+                {selectedColor === color && (
+                  <Ionicons name="checkmark" size={18} color="#fff" />
+                )}
+              </View>
+            </TouchableWithoutFeedback>
           ))}
+        </View>
+      </Card>
+
+      {/* Appearance */}
+      <Card style={styles.card}>
+        <Text style={[styles.cardTitle, { color: colors.primary }]}>Appearance</Text>
+
+        <View style={[styles.toggleItem, styles.toggleItemLast]}>
+          <View style={styles.toggleInfo}>
+            <Ionicons name={isDark ? 'moon' : 'sunny'} size={18} color={isDark ? colors.purple : colors.orange} />
+            <Text style={[styles.toggleLabel, { color: colors.primary }]}>Dark Mode</Text>
+          </View>
+          <Switch
+            value={isDark}
+            onValueChange={toggleTheme}
+            trackColor={{ false: colors.muted, true: colors.blue + '60' }}
+            thumbColor={isDark ? colors.blue : '#f4f3f4'}
+          />
         </View>
       </Card>
 
       {/* Notification preferences */}
       <Card style={styles.card}>
-        <Text style={styles.cardTitle}>Notification Preferences</Text>
+        <Text style={[styles.cardTitle, { color: colors.primary }]}>Notification Preferences</Text>
 
-        <View style={styles.toggleItem}>
+        <View style={[styles.toggleItem, { borderBottomColor: colors.border }]}>
           <View style={styles.toggleInfo}>
-            <Ionicons name="receipt-outline" size={18} color={COLORS.blue} />
-            <Text style={styles.toggleLabel}>Expense added</Text>
+            <Ionicons name="receipt-outline" size={18} color={colors.blue} />
+            <Text style={[styles.toggleLabel, { color: colors.primary }]}>Expense added</Text>
           </View>
           <Switch
             value={notifExpenseAdded}
             onValueChange={setNotifExpenseAdded}
-            trackColor={{ false: COLORS.muted, true: COLORS.blue + '60' }}
-            thumbColor={notifExpenseAdded ? COLORS.blue : '#f4f3f4'}
+            trackColor={{ false: colors.muted, true: colors.blue + '60' }}
+            thumbColor={notifExpenseAdded ? colors.blue : '#f4f3f4'}
           />
         </View>
 
-        <View style={styles.toggleItem}>
+        <View style={[styles.toggleItem, { borderBottomColor: colors.border }]}>
           <View style={styles.toggleInfo}>
-            <Ionicons name="cash-outline" size={18} color={COLORS.orange} />
-            <Text style={styles.toggleLabel}>Payment reminders</Text>
+            <Ionicons name="cash-outline" size={18} color={colors.orange} />
+            <Text style={[styles.toggleLabel, { color: colors.primary }]}>Payment reminders</Text>
           </View>
           <Switch
             value={notifPaymentReminders}
             onValueChange={setNotifPaymentReminders}
-            trackColor={{ false: COLORS.muted, true: COLORS.blue + '60' }}
-            thumbColor={notifPaymentReminders ? COLORS.blue : '#f4f3f4'}
+            trackColor={{ false: colors.muted, true: colors.blue + '60' }}
+            thumbColor={notifPaymentReminders ? colors.blue : '#f4f3f4'}
           />
         </View>
 
-        <View style={styles.toggleItem}>
+        <View style={[styles.toggleItem, { borderBottomColor: colors.border }]}>
           <View style={styles.toggleInfo}>
-            <Ionicons name="alarm-outline" size={18} color={COLORS.purple} />
-            <Text style={styles.toggleLabel}>Task due soon</Text>
+            <Ionicons name="alarm-outline" size={18} color={colors.purple} />
+            <Text style={[styles.toggleLabel, { color: colors.primary }]}>Task due soon</Text>
           </View>
           <Switch
             value={notifTaskDueSoon}
             onValueChange={setNotifTaskDueSoon}
-            trackColor={{ false: COLORS.muted, true: COLORS.blue + '60' }}
-            thumbColor={notifTaskDueSoon ? COLORS.blue : '#f4f3f4'}
+            trackColor={{ false: colors.muted, true: colors.blue + '60' }}
+            thumbColor={notifTaskDueSoon ? colors.blue : '#f4f3f4'}
           />
         </View>
 
         <View style={[styles.toggleItem, styles.toggleItemLast]}>
           <View style={styles.toggleInfo}>
-            <Ionicons name="alert-circle-outline" size={18} color={COLORS.red} />
-            <Text style={styles.toggleLabel}>Task overdue</Text>
+            <Ionicons name="alert-circle-outline" size={18} color={colors.red} />
+            <Text style={[styles.toggleLabel, { color: colors.primary }]}>Task overdue</Text>
           </View>
           <Switch
             value={notifTaskOverdue}
             onValueChange={setNotifTaskOverdue}
-            trackColor={{ false: COLORS.muted, true: COLORS.blue + '60' }}
-            thumbColor={notifTaskOverdue ? COLORS.blue : '#f4f3f4'}
+            trackColor={{ false: colors.muted, true: colors.blue + '60' }}
+            thumbColor={notifTaskOverdue ? colors.blue : '#f4f3f4'}
           />
         </View>
       </Card>
@@ -296,7 +377,7 @@ export default function ProfileScreen() {
       </View>
 
       {/* App version */}
-      <Text style={styles.versionText}>Split Pay & Tasks v{appVersion}</Text>
+      <Text style={[styles.versionText, { color: colors.mutedForeground }]}>Split Pay & Tasks v{appVersion}</Text>
     </ScrollView>
   );
 }
@@ -308,7 +389,6 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
   },
   contentContainer: {
     paddingBottom: 100,
@@ -328,11 +408,9 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: COLORS.blue,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 3,
-    borderColor: COLORS.background,
   },
 
   // Cards
@@ -343,12 +421,10 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 15,
     fontWeight: '600',
-    color: COLORS.primary,
     marginBottom: 4,
   },
   cardSubtitle: {
     fontSize: 13,
-    color: COLORS.mutedForeground,
     marginBottom: 14,
   },
 
@@ -356,7 +432,6 @@ const styles = StyleSheet.create({
   fieldRow: {
     paddingVertical: 4,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
   },
   fieldRowLast: {
     borderBottomWidth: 0,
@@ -364,7 +439,6 @@ const styles = StyleSheet.create({
   fieldLabel: {
     fontSize: 12,
     fontWeight: '600',
-    color: COLORS.mutedForeground,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     marginBottom: 6,
@@ -372,12 +446,9 @@ const styles = StyleSheet.create({
   fieldValue: {
     fontSize: 16,
     fontWeight: '500',
-    color: COLORS.primary,
     flex: 1,
   },
-  fieldValueMuted: {
-    color: COLORS.mutedForeground,
-  },
+  fieldValueMuted: {},
   editableRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -401,12 +472,10 @@ const styles = StyleSheet.create({
   cancelText: {
     fontSize: 14,
     fontWeight: '500',
-    color: COLORS.mutedForeground,
   },
   saveText: {
     fontSize: 14,
     fontWeight: '600',
-    color: COLORS.blue,
   },
 
   // Color picker
@@ -424,7 +493,6 @@ const styles = StyleSheet.create({
   },
   colorSwatchSelected: {
     borderWidth: 3,
-    borderColor: COLORS.primary,
   },
 
   // Notification toggles
@@ -434,7 +502,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
   },
   toggleItemLast: {
     borderBottomWidth: 0,
@@ -448,7 +515,6 @@ const styles = StyleSheet.create({
   toggleLabel: {
     fontSize: 15,
     fontWeight: '500',
-    color: COLORS.primary,
   },
 
   // Sign out
@@ -460,7 +526,6 @@ const styles = StyleSheet.create({
   // Version
   versionText: {
     fontSize: 13,
-    color: COLORS.mutedForeground,
     textAlign: 'center',
     marginTop: 24,
     marginBottom: 8,

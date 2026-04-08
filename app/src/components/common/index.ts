@@ -4,5 +4,6 @@ export { default as Button } from './Button';
 export { default as Card } from './Card';
 export { default as EmptyState } from './EmptyState';
 export { default as FAB } from './FAB';
+export { default as FluidTouchable } from './FluidTouchable';
 export { default as Input } from './Input';
 export { default as LoadingScreen } from './LoadingScreen';

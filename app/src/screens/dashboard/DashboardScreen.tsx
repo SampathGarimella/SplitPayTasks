@@ -1,11 +1,12 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   RefreshControl,
-  TouchableOpacity,
+  TouchableWithoutFeedback,
+  Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
@@ -13,9 +14,10 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { CompositeNavigationProp } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS } from '../../config/constants';
+import { useTheme } from '../../hooks/useTheme';
+import { getColors } from '../../config/constants';
 import { useAuth } from '../../hooks/useAuth';
-import { Avatar, Card, Badge, EmptyState } from '../../components/common';
+import { Avatar, Card, Badge, EmptyState, FluidTouchable } from '../../components/common';
 import { getGroups } from '../../services/groupService';
 import { getExpenses } from '../../services/expenseService';
 import { getTasks } from '../../services/taskService';
@@ -43,12 +45,12 @@ type DashboardNavProp = CompositeNavigationProp<
 // Helpers
 // ---------------------------------------------------------------------------
 
-const STATUS_CONFIG: Record<TaskStatus, { label: string; color: string }> = {
-  pending: { label: 'Pending', color: COLORS.orange },
-  completed: { label: 'Done', color: COLORS.green },
-  skipped: { label: 'Skipped', color: COLORS.mutedForeground },
-  overdue: { label: 'Overdue', color: COLORS.red },
-};
+const getStatusConfig = (colors: any): Record<TaskStatus, { label: string; color: string }> => ({
+  pending: { label: 'Pending', color: colors.orange },
+  completed: { label: 'Done', color: colors.green },
+  skipped: { label: 'Skipped', color: colors.mutedForeground },
+  overdue: { label: 'Overdue', color: colors.red },
+});
 
 function formatCurrency(amount: number, currency: string = 'USD'): string {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(amount);
@@ -90,6 +92,9 @@ function formatRelativeDate(iso: string): string {
 export default function DashboardScreen() {
   const navigation = useNavigation<DashboardNavProp>();
   const { user } = useAuth();
+  const { isDark } = useTheme();
+  const colors = getColors(isDark);
+  const STATUS_CONFIG = getStatusConfig(colors);
 
   const [groups, setGroups] = useState<GroupWithMembers[]>([]);
   const [recentExpenses, setRecentExpenses] = useState<Expense[]>([]);
@@ -99,6 +104,42 @@ export default function DashboardScreen() {
   const [activeTaskCount, setActiveTaskCount] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
   const [loaded, setLoaded] = useState(false);
+
+  // Profile avatar animation
+  const profileScaleAnim = useRef(new Animated.Value(1)).current;
+  const profileOpacityAnim = useRef(new Animated.Value(1)).current;
+
+  const handleProfilePressIn = useCallback(() => {
+    Animated.parallel([
+      Animated.spring(profileScaleAnim, {
+        toValue: 0.9,
+        useNativeDriver: true,
+        speed: 50,
+        bounciness: 4,
+      }),
+      Animated.timing(profileOpacityAnim, {
+        toValue: 0.8,
+        duration: 100,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [profileScaleAnim, profileOpacityAnim]);
+
+  const handleProfilePressOut = useCallback(() => {
+    Animated.parallel([
+      Animated.spring(profileScaleAnim, {
+        toValue: 1,
+        useNativeDriver: true,
+        speed: 50,
+        bounciness: 6,
+      }),
+      Animated.timing(profileOpacityAnim, {
+        toValue: 1,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [profileScaleAnim, profileOpacityAnim]);
 
   // ---------------------------------------------------------------------------
   // Data fetching
@@ -216,79 +257,98 @@ export default function DashboardScreen() {
   // ---------------------------------------------------------------------------
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={['top']}>
     <ScrollView
-      style={styles.container}
+      style={[styles.container, { backgroundColor: colors.background }]}
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
       refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={COLORS.blue} />
+        <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.blue} />
       }
     >
       {/* Header */}
       <View style={styles.header}>
         <View>
-          <Text style={styles.greeting}>
+          <Text style={[styles.greeting, { color: colors.primary }]}>
             Hello, {user?.full_name?.split(' ')[0] ?? 'there'}
           </Text>
-          <Text style={styles.headerSubtitle}>Here's your overview</Text>
+          <Text style={[styles.headerSubtitle, { color: colors.mutedForeground }]}>Here's your overview</Text>
         </View>
-        <Avatar
-          name={user?.full_name ?? '?'}
-          color={user?.color ?? COLORS.blue}
-          imageUrl={user?.avatar_url}
-          size="medium"
-        />
+        <TouchableWithoutFeedback
+          onPress={() => navigation.navigate('Profile')}
+          onPressIn={handleProfilePressIn}
+          onPressOut={handleProfilePressOut}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Animated.View
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 22,
+              alignItems: 'center',
+              justifyContent: 'center',
+              transform: [{ scale: profileScaleAnim }],
+              opacity: profileOpacityAnim,
+            }}
+          >
+            <Avatar
+              name={user?.full_name ?? '?'}
+              color={user?.color ?? colors.blue}
+              imageUrl={user?.avatar_url}
+              size="medium"
+            />
+          </Animated.View>
+        </TouchableWithoutFeedback>
       </View>
 
       {/* Quick Stats Grid */}
       <View style={styles.statsGrid}>
-        <Card style={[styles.statCard, { backgroundColor: COLORS.blue + '0F' }]}>
-          <View style={[styles.statIcon, { backgroundColor: COLORS.blue + '1A' }]}>
-            <Ionicons name="cash-outline" size={20} color={COLORS.blue} />
+        <Card style={[styles.statCard, { backgroundColor: colors.blue + '0F' }]}>
+          <View style={[styles.statIcon, { backgroundColor: colors.blue + '1A' }]}>
+            <Ionicons name="cash-outline" size={20} color={colors.blue} />
           </View>
-          <Text style={styles.statValue}>
+          <Text style={[styles.statValue, { color: colors.primary }]}>
             {formatCurrency(Math.abs(totalBalance))}
           </Text>
-          <Text style={styles.statLabel}>
+          <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>
             {totalBalance >= 0 ? 'You are owed' : 'You owe'}
           </Text>
         </Card>
 
-        <Card style={[styles.statCard, { backgroundColor: COLORS.green + '0F' }]}>
-          <View style={[styles.statIcon, { backgroundColor: COLORS.green + '1A' }]}>
-            <Ionicons name="checkmark-circle-outline" size={20} color={COLORS.green} />
+        <Card style={[styles.statCard, { backgroundColor: colors.green + '0F' }]}>
+          <View style={[styles.statIcon, { backgroundColor: colors.green + '1A' }]}>
+            <Ionicons name="checkmark-circle-outline" size={20} color={colors.green} />
           </View>
-          <Text style={styles.statValue}>{activeTaskCount}</Text>
-          <Text style={styles.statLabel}>Active Tasks</Text>
+          <Text style={[styles.statValue, { color: colors.primary }]}>{activeTaskCount}</Text>
+          <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Active Tasks</Text>
         </Card>
 
-        <Card style={[styles.statCard, { backgroundColor: COLORS.purple + '0F' }]}>
-          <View style={[styles.statIcon, { backgroundColor: COLORS.purple + '1A' }]}>
-            <Ionicons name="people-outline" size={20} color={COLORS.purple} />
+        <Card style={[styles.statCard, { backgroundColor: colors.purple + '0F' }]}>
+          <View style={[styles.statIcon, { backgroundColor: colors.purple + '1A' }]}>
+            <Ionicons name="people-outline" size={20} color={colors.purple} />
           </View>
-          <Text style={styles.statValue}>{groups.length}</Text>
-          <Text style={styles.statLabel}>Groups</Text>
+          <Text style={[styles.statValue, { color: colors.primary }]}>{groups.length}</Text>
+          <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Groups</Text>
         </Card>
 
-        <Card style={[styles.statCard, { backgroundColor: COLORS.orange + '0F' }]}>
-          <View style={[styles.statIcon, { backgroundColor: COLORS.orange + '1A' }]}>
-            <Ionicons name="receipt-outline" size={20} color={COLORS.orange} />
+        <Card style={[styles.statCard, { backgroundColor: colors.orange + '0F' }]}>
+          <View style={[styles.statIcon, { backgroundColor: colors.orange + '1A' }]}>
+            <Ionicons name="receipt-outline" size={20} color={colors.orange} />
           </View>
-          <Text style={styles.statValue}>{pendingExpenseCount}</Text>
-          <Text style={styles.statLabel}>Pending</Text>
+          <Text style={[styles.statValue, { color: colors.primary }]}>{pendingExpenseCount}</Text>
+          <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Pending</Text>
         </Card>
       </View>
 
       {/* Recent Expenses */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Recent Expenses</Text>
-          <TouchableOpacity
+          <Text style={[styles.sectionTitle, { color: colors.primary }]}>Recent Expenses</Text>
+          <FluidTouchable
             onPress={() => navigation.getParent()?.navigate('ExpensesTab')}
           >
-            <Text style={styles.seeAll}>See All</Text>
-          </TouchableOpacity>
+            <Text style={[styles.seeAll, { color: colors.blue }]}>See All</Text>
+          </FluidTouchable>
         </View>
 
         {loaded && recentExpenses.length === 0 ? (
@@ -298,42 +358,46 @@ export default function DashboardScreen() {
             subtitle="Add your first shared expense to get started"
           />
         ) : (
-          recentExpenses.map((expense) => (
-            <Card key={expense.id} style={styles.expenseCard}>
-              <View style={styles.expenseRow}>
-                <Avatar
-                  name={expense.payer?.full_name ?? '?'}
-                  color={expense.payer?.color ?? COLORS.blue}
-                  imageUrl={expense.payer?.avatar_url}
-                  size="small"
-                />
-                <View style={styles.expenseInfo}>
-                  <Text style={styles.expenseDescription} numberOfLines={1}>
-                    {expense.description}
-                  </Text>
-                  <Text style={styles.expenseMeta}>
-                    {expense.payer?.full_name ?? 'Unknown'} {' \u2022 '}
-                    {formatRelativeDate(expense.created_at)}
+          recentExpenses.map((expense) => {
+            const linkedGroup = groups.find(g => g.id === expense.group_id);
+            return (
+              <Card key={expense.id} style={styles.expenseCard}>
+                <View style={styles.expenseRow}>
+                  <Avatar
+                    name={expense.payer?.full_name ?? '?'}
+                    color={expense.payer?.color ?? colors.blue}
+                    imageUrl={expense.payer?.avatar_url}
+                    size="small"
+                  />
+                  <View style={styles.expenseInfo}>
+                    <Text style={[styles.expenseDescription, { color: colors.primary }]} numberOfLines={1}>
+                      {expense.description}
+                    </Text>
+                    <Text style={[styles.expenseMeta, { color: colors.mutedForeground }]}>
+                      {expense.payer?.full_name ?? 'Unknown'} {' \u2022 '}
+                      {formatRelativeDate(expense.created_at)}
+                      {linkedGroup && ` \u2022 ${linkedGroup.name}`}
+                    </Text>
+                  </View>
+                  <Text style={[styles.expenseAmount, { color: colors.primary }]}>
+                    {formatCurrency(expense.amount, expense.currency)}
                   </Text>
                 </View>
-                <Text style={styles.expenseAmount}>
-                  {formatCurrency(expense.amount, expense.currency)}
-                </Text>
-              </View>
-            </Card>
-          ))
+              </Card>
+            );
+          })
         )}
       </View>
 
       {/* Upcoming Tasks */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Upcoming Tasks</Text>
-          <TouchableOpacity
+          <Text style={[styles.sectionTitle, { color: colors.primary }]}>Upcoming Tasks</Text>
+          <FluidTouchable
             onPress={() => navigation.getParent()?.navigate('TasksTab')}
           >
-            <Text style={styles.seeAll}>See All</Text>
-          </TouchableOpacity>
+            <Text style={[styles.seeAll, { color: colors.blue }]}>See All</Text>
+          </FluidTouchable>
         </View>
 
         {loaded && upcomingTasks.length === 0 ? (
@@ -345,24 +409,26 @@ export default function DashboardScreen() {
         ) : (
           upcomingTasks.map((task) => {
             const statusConfig = STATUS_CONFIG[task.status];
+            const linkedGroup = groups.find(g => g.id === task.group_id);
             return (
               <Card key={task.id} style={styles.taskCard}>
                 <View style={styles.taskRow}>
                   <Avatar
                     name={task.assignee?.full_name ?? '?'}
-                    color={task.assignee?.color ?? COLORS.purple}
+                    color={task.assignee?.color ?? colors.purple}
                     imageUrl={task.assignee?.avatar_url}
                     size="small"
                   />
                   <View style={styles.taskInfo}>
-                    <Text style={styles.taskTitle} numberOfLines={1}>
+                    <Text style={[styles.taskTitle, { color: colors.primary }]} numberOfLines={1}>
                       {task.title}
                     </Text>
-                    <Text style={styles.taskMeta}>
+                    <Text style={[styles.taskMeta, { color: colors.mutedForeground }]}>
                       {task.assignee?.full_name ?? 'Unassigned'}
                       {task.due_date
                         ? ` \u2022 Due ${formatDate(task.due_date)}`
                         : ''}
+                      {linkedGroup && ` \u2022 ${linkedGroup.name}`}
                     </Text>
                   </View>
                   <Badge label={statusConfig.label} color={statusConfig.color} />
@@ -375,29 +441,27 @@ export default function DashboardScreen() {
 
       {/* Quick Actions */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Quick Actions</Text>
+        <Text style={[styles.sectionTitle, { color: colors.primary }]}>Quick Actions</Text>
         <View style={styles.actionsRow}>
-          <TouchableOpacity
-            style={[styles.actionButton, { backgroundColor: COLORS.blue + '0F' }]}
+          <FluidTouchable
+            style={[styles.actionButton, { backgroundColor: colors.blue + '0F' }]}
             onPress={navigateToAddExpense}
-            activeOpacity={0.7}
           >
-            <View style={[styles.actionIcon, { backgroundColor: COLORS.blue + '1A' }]}>
-              <Ionicons name="add-circle-outline" size={24} color={COLORS.blue} />
+            <View style={[styles.actionIcon, { backgroundColor: colors.blue + '1A' }]}>
+              <Ionicons name="add-circle-outline" size={24} color={colors.blue} />
             </View>
-            <Text style={styles.actionLabel}>Add Expense</Text>
-          </TouchableOpacity>
+            <Text style={[styles.actionLabel, { color: colors.primary }]}>Add Expense</Text>
+          </FluidTouchable>
 
-          <TouchableOpacity
-            style={[styles.actionButton, { backgroundColor: COLORS.green + '0F' }]}
+          <FluidTouchable
+            style={[styles.actionButton, { backgroundColor: colors.green + '0F' }]}
             onPress={navigateToAddTask}
-            activeOpacity={0.7}
           >
-            <View style={[styles.actionIcon, { backgroundColor: COLORS.green + '1A' }]}>
-              <Ionicons name="clipboard-outline" size={24} color={COLORS.green} />
+            <View style={[styles.actionIcon, { backgroundColor: colors.green + '1A' }]}>
+              <Ionicons name="clipboard-outline" size={24} color={colors.green} />
             </View>
-            <Text style={styles.actionLabel}>Add Task</Text>
-          </TouchableOpacity>
+            <Text style={[styles.actionLabel, { color: colors.primary }]}>Add Task</Text>
+          </FluidTouchable>
         </View>
       </View>
     </ScrollView>
@@ -412,11 +476,9 @@ export default function DashboardScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: COLORS.background,
   },
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
   },
   content: {
     paddingHorizontal: 16,
@@ -434,12 +496,10 @@ const styles = StyleSheet.create({
   greeting: {
     fontSize: 24,
     fontWeight: '700',
-    color: COLORS.primary,
     letterSpacing: -0.5,
   },
   headerSubtitle: {
     fontSize: 14,
-    color: COLORS.mutedForeground,
     marginTop: 2,
   },
 
@@ -466,12 +526,10 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 20,
     fontWeight: '700',
-    color: COLORS.primary,
     marginBottom: 2,
   },
   statLabel: {
     fontSize: 13,
-    color: COLORS.mutedForeground,
     fontWeight: '500',
   },
 
@@ -488,12 +546,10 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: COLORS.primary,
   },
   seeAll: {
     fontSize: 14,
     fontWeight: '500',
-    color: COLORS.blue,
   },
 
   // Expense cards
@@ -512,17 +568,14 @@ const styles = StyleSheet.create({
   expenseDescription: {
     fontSize: 15,
     fontWeight: '600',
-    color: COLORS.primary,
     marginBottom: 2,
   },
   expenseMeta: {
     fontSize: 13,
-    color: COLORS.mutedForeground,
   },
   expenseAmount: {
     fontSize: 16,
     fontWeight: '700',
-    color: COLORS.primary,
   },
 
   // Task cards
@@ -541,12 +594,10 @@ const styles = StyleSheet.create({
   taskTitle: {
     fontSize: 15,
     fontWeight: '600',
-    color: COLORS.primary,
     marginBottom: 2,
   },
   taskMeta: {
     fontSize: 13,
-    color: COLORS.mutedForeground,
   },
 
   // Quick actions
@@ -572,6 +623,5 @@ const styles = StyleSheet.create({
   actionLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: COLORS.primary,
   },
 });

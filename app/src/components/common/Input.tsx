@@ -6,7 +6,8 @@ import {
   StyleSheet,
   KeyboardTypeOptions,
 } from 'react-native';
-import { COLORS } from '../../config/constants';
+import { useTheme } from '../../hooks/useTheme';
+import { getColors } from '../../config/constants';
 
 interface InputProps {
   label?: string;
@@ -33,20 +34,24 @@ export default function Input({
   autoCapitalize,
   editable = true,
 }: InputProps) {
+  const { isDark } = useTheme();
+  const colors = getColors(isDark);
+
   return (
     <View style={styles.wrapper}>
-      {label && <Text style={styles.label}>{label}</Text>}
+      {label && <Text style={[styles.label, { color: colors.primary }]}>{label}</Text>}
       <TextInput
         style={[
           styles.input,
+          { backgroundColor: colors.input, color: colors.primary },
           multiline && styles.multiline,
-          error ? styles.errorBorder : null,
+          error ? { borderColor: colors.destructive } : null,
           !editable && styles.disabled,
         ]}
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
-        placeholderTextColor={COLORS.mutedForeground}
+        placeholderTextColor={colors.mutedForeground}
         multiline={multiline}
         keyboardType={keyboardType}
         secureTextEntry={secureTextEntry}
@@ -54,7 +59,7 @@ export default function Input({
         editable={editable}
         textAlignVertical={multiline ? 'top' : 'center'}
       />
-      {error && <Text style={styles.errorText}>{error}</Text>}
+      {error && <Text style={[styles.errorText, { color: colors.destructive }]}>{error}</Text>}
     </View>
   );
 }
@@ -66,16 +71,13 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: '500',
-    color: COLORS.primary,
     marginBottom: 6,
   },
   input: {
-    backgroundColor: COLORS.input,
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 15,
-    color: COLORS.primary,
     borderWidth: 1,
     borderColor: 'transparent',
   },
@@ -83,12 +85,8 @@ const styles = StyleSheet.create({
     minHeight: 100,
     paddingTop: 12,
   },
-  errorBorder: {
-    borderColor: COLORS.destructive,
-  },
   errorText: {
     fontSize: 12,
-    color: COLORS.destructive,
     marginTop: 4,
   },
   disabled: {

@@ -13,6 +13,9 @@ export async function createGroup(
   description: string | null,
   currency: string = 'USD',
   timezone: string = 'UTC',
+  group_type: string = 'home',
+  expense_permission: string = 'anyone',
+  task_permission: string = 'anyone',
 ): Promise<GroupWithMembers> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not authenticated');
@@ -24,6 +27,9 @@ export async function createGroup(
       description,
       currency,
       timezone,
+      group_type,
+      expense_permission,
+      task_permission,
       created_by: user.id,
     })
     .select()
@@ -152,7 +158,7 @@ export async function joinGroupByCode(code: string): Promise<GroupWithMembers> {
  */
 export async function updateGroup(
   id: string,
-  updates: Partial<Pick<Group, 'name' | 'description' | 'currency' | 'timezone' | 'default_split_type'>>,
+  updates: Partial<Pick<Group, 'name' | 'description' | 'currency' | 'timezone' | 'default_split_type' | 'group_type' | 'expense_permission' | 'task_permission'>>,
 ): Promise<Group> {
   const { data, error } = await supabase
     .from('groups')

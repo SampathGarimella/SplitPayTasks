@@ -10,6 +10,8 @@ export type GroupRole = 'admin' | 'member';
 export type ExpenseCategory = 'food' | 'groceries' | 'rent' | 'utilities' | 'transport' | 'entertainment' | 'subscriptions' | 'misc';
 export type TaskCategory = 'cleaning' | 'cooking' | 'shopping' | 'maintenance' | 'laundry' | 'trash' | 'misc';
 export type NotificationType = 'expense_added' | 'payment_reminder' | 'task_due' | 'task_overdue' | 'task_completed' | 'group_invite' | 'settlement';
+export type GroupType = 'home' | 'trip' | 'office' | 'event' | 'custom' | string;
+export type GroupPermission = 'anyone' | 'owner_only';
 
 export interface User {
   id: string;
@@ -30,6 +32,9 @@ export interface Group {
   default_split_type: SplitType;
   currency: string;
   timezone: string;
+  group_type: string;
+  expense_permission: string;
+  task_permission: string;
   created_by: string;
   created_at: string;
   updated_at: string;

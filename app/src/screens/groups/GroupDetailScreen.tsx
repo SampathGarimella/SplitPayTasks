@@ -12,13 +12,15 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { COLORS } from '../../config/constants';
+import { useTheme } from '../../hooks/useTheme';
+import { getColors, GROUP_TYPES } from '../../config/constants';
 import {
   Avatar,
   Badge,
   Card,
   Button,
   LoadingScreen,
+  FluidTouchable,
 } from '../../components/common';
 import {
   getGroup,
@@ -33,12 +35,22 @@ export default function GroupDetailScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const { user } = useAuth();
+  const { isDark } = useTheme();
+  const colors = getColors(isDark);
 
   const groupId: string = route.params?.groupId;
 
   const [group, setGroup] = useState<GroupWithMembers | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+
+  // Get group type info
+  const getGroupTypeInfo = (type: string | undefined) => {
+    const found = GROUP_TYPES.find(t => t.value === type);
+    if (found) return found;
+    // Custom type
+    return { value: type ?? 'custom', label: type ?? 'Custom', icon: 'ellipsis-horizontal' as const, color: colors.mutedForeground };
+  };
 
   // ----------------------------------------------------------
   // Data fetching
@@ -168,38 +180,54 @@ export default function GroupDetailScreen() {
     return <LoadingScreen />;
   }
 
+  const groupTypeInfo = getGroupTypeInfo(group.group_type);
+
   return (
     <ScrollView
-      style={styles.container}
+      style={[styles.container, { backgroundColor: colors.background }]}
       contentContainerStyle={styles.scrollContent}
       refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.blue} />
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.blue} />
       }
     >
       {/* Group Info Header */}
       <Card style={styles.headerCard}>
-        <Text style={styles.groupName}>{group.name}</Text>
-        {group.description && (
-          <Text style={styles.groupDescription}>{group.description}</Text>
-        )}
+        <View style={styles.groupHeaderRow}>
+          <View style={styles.groupTitleSection}>
+            <Text style={[styles.groupName, { color: colors.primary }]}>{group.name}</Text>
+            {group.description && (
+              <Text style={[styles.groupDescription, { color: colors.mutedForeground }]}>{group.description}</Text>
+            )}
+          </View>
+          <View style={[styles.groupTypeBadge, { backgroundColor: groupTypeInfo.color + '1A' }]}>
+            <Ionicons
+              name={groupTypeInfo.icon as keyof typeof Ionicons.glyphMap}
+              size={16}
+              color={groupTypeInfo.color}
+            />
+            <Text style={[styles.groupTypeText, { color: groupTypeInfo.color }]}>
+              {groupTypeInfo.label}
+            </Text>
+          </View>
+        </View>
 
         {/* Invite Code */}
         <View style={styles.inviteSection}>
-          <Text style={styles.inviteLabel}>Invite Code</Text>
+          <Text style={[styles.inviteLabel, { color: colors.mutedForeground }]}>Invite Code</Text>
           <View style={styles.inviteRow}>
-            <View style={styles.codeBox}>
-              <Text style={styles.codeText}>{group.invite_code}</Text>
+            <View style={[styles.codeBox, { backgroundColor: colors.input }]}>
+              <Text style={[styles.codeText, { color: colors.primary }]}>{group.invite_code}</Text>
             </View>
-            <TouchableOpacity style={styles.iconButton} onPress={handleCopyCode}>
-              <Ionicons name="copy-outline" size={20} color={COLORS.blue} />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.iconButton} onPress={handleShareCode}>
-              <Ionicons name="share-outline" size={20} color={COLORS.blue} />
-            </TouchableOpacity>
+            <FluidTouchable style={styles.iconButton} onPress={handleCopyCode}>
+              <Ionicons name="copy-outline" size={20} color={colors.blue} />
+            </FluidTouchable>
+            <FluidTouchable style={styles.iconButton} onPress={handleShareCode}>
+              <Ionicons name="share-outline" size={20} color={colors.blue} />
+            </FluidTouchable>
             {isAdmin && (
-              <TouchableOpacity style={styles.iconButton} onPress={handleRegenerateCode}>
-                <Ionicons name="refresh-outline" size={20} color={COLORS.mutedForeground} />
-              </TouchableOpacity>
+              <FluidTouchable style={styles.iconButton} onPress={handleRegenerateCode}>
+                <Ionicons name="refresh-outline" size={20} color={colors.mutedForeground} />
+              </FluidTouchable>
             )}
           </View>
         </View>
@@ -207,23 +235,23 @@ export default function GroupDetailScreen() {
         {/* Group meta */}
         <View style={styles.metaRow}>
           <View style={styles.metaItem}>
-            <Ionicons name="cash-outline" size={16} color={COLORS.mutedForeground} />
-            <Text style={styles.metaText}>{group.currency}</Text>
+            <Ionicons name="cash-outline" size={16} color={colors.mutedForeground} />
+            <Text style={[styles.metaText, { color: colors.mutedForeground }]}>{group.currency}</Text>
           </View>
           <View style={styles.metaItem}>
-            <Ionicons name="git-branch-outline" size={16} color={COLORS.mutedForeground} />
-            <Text style={styles.metaText}>{group.default_split_type}</Text>
+            <Ionicons name="git-branch-outline" size={16} color={colors.mutedForeground} />
+            <Text style={[styles.metaText, { color: colors.mutedForeground }]}>{group.default_split_type}</Text>
           </View>
           <View style={styles.metaItem}>
-            <Ionicons name="people-outline" size={16} color={COLORS.mutedForeground} />
-            <Text style={styles.metaText}>{group.members.length} members</Text>
+            <Ionicons name="people-outline" size={16} color={colors.mutedForeground} />
+            <Text style={[styles.metaText, { color: colors.mutedForeground }]}>{group.members.length} members</Text>
           </View>
         </View>
       </Card>
 
       {/* Quick Actions */}
       <View style={styles.quickActions}>
-        <TouchableOpacity
+        <FluidTouchable
           style={styles.quickAction}
           onPress={() =>
             navigation.getParent()?.navigate('ExpensesTab', {
@@ -232,13 +260,13 @@ export default function GroupDetailScreen() {
             })
           }
         >
-          <View style={[styles.quickActionIcon, { backgroundColor: COLORS.blue + '1A' }]}>
-            <Ionicons name="receipt-outline" size={22} color={COLORS.blue} />
+          <View style={[styles.quickActionIcon, { backgroundColor: colors.blue + '1A' }]}>
+            <Ionicons name="receipt-outline" size={22} color={colors.blue} />
           </View>
-          <Text style={styles.quickActionLabel}>Add Expense</Text>
-        </TouchableOpacity>
+          <Text style={[styles.quickActionLabel, { color: colors.primary }]}>Add Expense</Text>
+        </FluidTouchable>
 
-        <TouchableOpacity
+        <FluidTouchable
           style={styles.quickAction}
           onPress={() =>
             navigation.getParent()?.navigate('TasksTab', {
@@ -247,13 +275,13 @@ export default function GroupDetailScreen() {
             })
           }
         >
-          <View style={[styles.quickActionIcon, { backgroundColor: COLORS.green + '1A' }]}>
-            <Ionicons name="checkbox-outline" size={22} color={COLORS.green} />
+          <View style={[styles.quickActionIcon, { backgroundColor: colors.green + '1A' }]}>
+            <Ionicons name="checkbox-outline" size={22} color={colors.green} />
           </View>
-          <Text style={styles.quickActionLabel}>Add Task</Text>
-        </TouchableOpacity>
+          <Text style={[styles.quickActionLabel, { color: colors.primary }]}>Add Task</Text>
+        </FluidTouchable>
 
-        <TouchableOpacity
+        <FluidTouchable
           style={styles.quickAction}
           onPress={() =>
             navigation.getParent()?.navigate('ExpensesTab', {
@@ -262,13 +290,13 @@ export default function GroupDetailScreen() {
             })
           }
         >
-          <View style={[styles.quickActionIcon, { backgroundColor: COLORS.purple + '1A' }]}>
-            <Ionicons name="list-outline" size={22} color={COLORS.purple} />
+          <View style={[styles.quickActionIcon, { backgroundColor: colors.purple + '1A' }]}>
+            <Ionicons name="list-outline" size={22} color={colors.purple} />
           </View>
-          <Text style={styles.quickActionLabel}>Expenses</Text>
-        </TouchableOpacity>
+          <Text style={[styles.quickActionLabel, { color: colors.primary }]}>Expenses</Text>
+        </FluidTouchable>
 
-        <TouchableOpacity
+        <FluidTouchable
           style={styles.quickAction}
           onPress={() =>
             navigation.getParent()?.navigate('ExpensesTab', {
@@ -277,16 +305,16 @@ export default function GroupDetailScreen() {
             })
           }
         >
-          <View style={[styles.quickActionIcon, { backgroundColor: COLORS.orange + '1A' }]}>
-            <Ionicons name="wallet-outline" size={22} color={COLORS.orange} />
+          <View style={[styles.quickActionIcon, { backgroundColor: colors.orange + '1A' }]}>
+            <Ionicons name="wallet-outline" size={22} color={colors.orange} />
           </View>
-          <Text style={styles.quickActionLabel}>Balances</Text>
-        </TouchableOpacity>
+          <Text style={[styles.quickActionLabel, { color: colors.primary }]}>Balances</Text>
+        </FluidTouchable>
       </View>
 
       {/* Members */}
       <View style={styles.sectionContainer}>
-        <Text style={styles.sectionTitle}>
+        <Text style={[styles.sectionTitle, { color: colors.primary }]}>
           Members ({group.members.length})
         </Text>
 
@@ -310,26 +338,26 @@ export default function GroupDetailScreen() {
                   />
                   <View style={styles.memberInfo}>
                     <View style={styles.memberNameRow}>
-                      <Text style={styles.memberName}>
+                      <Text style={[styles.memberName, { color: colors.primary }]}>
                         {member.user.full_name}
                         {isSelf ? ' (You)' : ''}
                       </Text>
                     </View>
-                    <Text style={styles.memberEmail}>{member.user.email}</Text>
+                    <Text style={[styles.memberEmail, { color: colors.mutedForeground }]}>{member.user.email}</Text>
                   </View>
 
                   <View style={styles.memberActions}>
                     <Badge
                       label={member.role === 'admin' ? 'Admin' : 'Member'}
-                      color={member.role === 'admin' ? COLORS.blue : COLORS.mutedForeground}
+                      color={member.role === 'admin' ? colors.blue : colors.mutedForeground}
                     />
                     {isAdmin && !isSelf && (
-                      <TouchableOpacity
+                      <FluidTouchable
                         style={styles.removeButton}
                         onPress={() => handleRemoveMember(member)}
                       >
-                        <Ionicons name="close-circle-outline" size={20} color={COLORS.red} />
-                      </TouchableOpacity>
+                        <Ionicons name="close-circle-outline" size={20} color={colors.red} />
+                      </FluidTouchable>
                     )}
                   </View>
                 </View>
@@ -342,7 +370,7 @@ export default function GroupDetailScreen() {
       <View style={styles.sectionContainer}>
         {isAdmin && (
           <Button
-            title="Edit Group"
+            title="Edit Group Settings"
             onPress={() =>
               navigation.navigate('CreateGroup', { groupId: group.id, editing: true })
             }
@@ -373,7 +401,6 @@ export default function GroupDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
   },
   scrollContent: {
     paddingBottom: 40,
@@ -382,16 +409,35 @@ const styles = StyleSheet.create({
   headerCard: {
     margin: 16,
   },
+  groupHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  groupTitleSection: {
+    flex: 1,
+  },
   groupName: {
     fontSize: 22,
     fontWeight: '700',
-    color: COLORS.primary,
   },
   groupDescription: {
     fontSize: 14,
-    color: COLORS.mutedForeground,
     marginTop: 4,
     lineHeight: 20,
+  },
+  groupTypeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    gap: 4,
+    marginLeft: 12,
+  },
+  groupTypeText: {
+    fontSize: 12,
+    fontWeight: '600',
   },
   // Invite
   inviteSection: {
@@ -400,7 +446,6 @@ const styles = StyleSheet.create({
   inviteLabel: {
     fontSize: 12,
     fontWeight: '600',
-    color: COLORS.mutedForeground,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     marginBottom: 6,
@@ -410,7 +455,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   codeBox: {
-    backgroundColor: COLORS.input,
     borderRadius: 8,
     paddingHorizontal: 14,
     paddingVertical: 8,
@@ -419,7 +463,6 @@ const styles = StyleSheet.create({
   codeText: {
     fontSize: 18,
     fontWeight: '700',
-    color: COLORS.primary,
     letterSpacing: 3,
   },
   iconButton: {
@@ -437,7 +480,6 @@ const styles = StyleSheet.create({
   },
   metaText: {
     fontSize: 13,
-    color: COLORS.mutedForeground,
     marginLeft: 4,
     fontWeight: '500',
     textTransform: 'capitalize',
@@ -452,6 +494,7 @@ const styles = StyleSheet.create({
   quickAction: {
     flex: 1,
     alignItems: 'center',
+    paddingVertical: 12,
   },
   quickActionIcon: {
     width: 48,
@@ -463,9 +506,7 @@ const styles = StyleSheet.create({
   },
   quickActionLabel: {
     fontSize: 11,
-    fontWeight: '600',
-    color: COLORS.mutedForeground,
-    textAlign: 'center',
+    fontWeight: '500',
   },
   // Section
   sectionContainer: {
@@ -474,14 +515,13 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 16,
-    fontWeight: '700',
-    color: COLORS.primary,
-    marginBottom: 10,
+    fontWeight: '600',
+    marginBottom: 12,
   },
-  // Members
+  // Member card
   memberCard: {
     marginBottom: 8,
-    paddingVertical: 12,
+    padding: 12,
   },
   memberRow: {
     flexDirection: 'row',
@@ -498,12 +538,10 @@ const styles = StyleSheet.create({
   memberName: {
     fontSize: 15,
     fontWeight: '600',
-    color: COLORS.primary,
   },
   memberEmail: {
-    fontSize: 12,
-    color: COLORS.mutedForeground,
-    marginTop: 1,
+    fontSize: 13,
+    marginTop: 2,
   },
   memberActions: {
     flexDirection: 'row',

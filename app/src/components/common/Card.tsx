@@ -1,12 +1,14 @@
-import React from 'react';
+import React, { useRef, useCallback } from 'react';
 import {
   View,
-  TouchableOpacity,
   StyleSheet,
   StyleProp,
   ViewStyle,
+  Animated,
+  TouchableWithoutFeedback,
 } from 'react-native';
-import { COLORS } from '../../config/constants';
+import { useTheme } from '../../hooks/useTheme';
+import { getColors } from '../../config/constants';
 
 interface CardProps {
   children: React.ReactNode;
@@ -15,24 +17,78 @@ interface CardProps {
 }
 
 export default function Card({ children, style, onPress }: CardProps) {
+  const { isDark } = useTheme();
+  const colors = getColors(isDark);
+  
+  // Fluid touch animations
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const opacityAnim = useRef(new Animated.Value(1)).current;
+
+  const handlePressIn = useCallback(() => {
+    Animated.parallel([
+      Animated.spring(scaleAnim, {
+        toValue: 0.98,
+        useNativeDriver: true,
+        speed: 50,
+        bounciness: 4,
+      }),
+      Animated.timing(opacityAnim, {
+        toValue: 0.9,
+        duration: 100,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [scaleAnim, opacityAnim]);
+
+  const handlePressOut = useCallback(() => {
+    Animated.parallel([
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        useNativeDriver: true,
+        speed: 50,
+        bounciness: 6,
+      }),
+      Animated.timing(opacityAnim, {
+        toValue: 1,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [scaleAnim, opacityAnim]);
+
+  const cardStyle = [
+    styles.card,
+    { backgroundColor: colors.card },
+    style,
+  ];
+
   if (onPress) {
     return (
-      <TouchableOpacity
-        style={[styles.card, style]}
+      <TouchableWithoutFeedback
         onPress={onPress}
-        activeOpacity={0.7}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
       >
-        {children}
-      </TouchableOpacity>
+        <Animated.View
+          style={[
+            cardStyle,
+            {
+              transform: [{ scale: scaleAnim }],
+              opacity: opacityAnim,
+            },
+          ]}
+        >
+          {children}
+        </Animated.View>
+      </TouchableWithoutFeedback>
     );
   }
 
-  return <View style={[styles.card, style]}>{children}</View>;
+  return <View style={cardStyle}>{children}</View>;
 }
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: COLORS.card,
     borderRadius: 12,
     padding: 16,
     shadowColor: '#000',

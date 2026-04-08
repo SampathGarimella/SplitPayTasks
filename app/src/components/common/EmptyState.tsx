@@ -1,7 +1,8 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS } from '../../config/constants';
+import { useTheme } from '../../hooks/useTheme';
+import { getColors } from '../../config/constants';
 import Button from './Button';
 
 interface EmptyStateProps {
@@ -19,13 +20,16 @@ export default function EmptyState({
   actionLabel,
   onAction,
 }: EmptyStateProps) {
+  const { isDark } = useTheme();
+  const colors = getColors(isDark);
+
   return (
     <View style={styles.container}>
-      <View style={styles.iconCircle}>
-        <Ionicons name={icon} size={36} color={COLORS.mutedForeground} />
+      <View style={[styles.iconCircle, { backgroundColor: colors.secondary }]}>
+        <Ionicons name={icon} size={36} color={colors.mutedForeground} />
       </View>
-      <Text style={styles.title}>{title}</Text>
-      <Text style={styles.subtitle}>{subtitle}</Text>
+      <Text style={[styles.title, { color: colors.primary }]}>{title}</Text>
+      <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>{subtitle}</Text>
       {actionLabel && onAction && (
         <View style={styles.action}>
           <Button title={actionLabel} onPress={onAction} size="small" />
@@ -47,7 +51,6 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: COLORS.secondary,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
@@ -55,13 +58,11 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: '600',
-    color: COLORS.primary,
     textAlign: 'center',
     marginBottom: 6,
   },
   subtitle: {
     fontSize: 14,
-    color: COLORS.mutedForeground,
     textAlign: 'center',
     lineHeight: 20,
   },

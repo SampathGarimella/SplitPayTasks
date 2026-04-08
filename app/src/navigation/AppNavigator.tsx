@@ -1,10 +1,11 @@
-import React from 'react';
-import { StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useRef, useCallback } from 'react';
+import { StyleSheet, Animated, TouchableWithoutFeedback, View } from 'react-native';
 import { NavigationContainer, useNavigation } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS } from '../config/constants';
+import { useTheme } from '../hooks/useTheme';
+import { getColors } from '../config/constants';
 import { useAuth } from '../hooks/useAuth';
 import { LoadingScreen, Avatar } from '../components/common';
 
@@ -108,12 +109,17 @@ const RootStack = createNativeStackNavigator<RootStackParamList>();
 // Shared stack screen options
 // ---------------------------------------------------------------------------
 
-const defaultStackOptions = {
-  headerShadowVisible: false,
-  headerStyle: { backgroundColor: COLORS.background },
-  headerTintColor: COLORS.primary,
-  headerTitleStyle: { fontWeight: '600' as const, fontSize: 17 },
-  contentStyle: { backgroundColor: COLORS.background },
+const useStackOptions = () => {
+  const { isDark } = useTheme();
+  const colors = getColors(isDark);
+  
+  return {
+    headerShadowVisible: false,
+    headerStyle: { backgroundColor: colors.background },
+    headerTintColor: colors.primary,
+    headerTitleStyle: { fontWeight: '600' as const, fontSize: 17 },
+    contentStyle: { backgroundColor: colors.background },
+  };
 };
 
 // ---------------------------------------------------------------------------
@@ -123,20 +129,71 @@ const defaultStackOptions = {
 function ProfileHeaderButton() {
   const { user } = useAuth();
   const navigation = useNavigation<any>();
+  const { isDark } = useTheme();
+  const colors = getColors(isDark);
+
+  // Fluid touch animations
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const opacityAnim = useRef(new Animated.Value(1)).current;
+
+  const handlePressIn = useCallback(() => {
+    Animated.parallel([
+      Animated.spring(scaleAnim, {
+        toValue: 0.9,
+        useNativeDriver: true,
+        speed: 50,
+        bounciness: 4,
+      }),
+      Animated.timing(opacityAnim, {
+        toValue: 0.8,
+        duration: 100,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [scaleAnim, opacityAnim]);
+
+  const handlePressOut = useCallback(() => {
+    Animated.parallel([
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        useNativeDriver: true,
+        speed: 50,
+        bounciness: 6,
+      }),
+      Animated.timing(opacityAnim, {
+        toValue: 1,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [scaleAnim, opacityAnim]);
 
   return (
-    <TouchableOpacity
+    <TouchableWithoutFeedback
       onPress={() => navigation.navigate('Profile')}
-      activeOpacity={0.7}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
       hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
     >
-      <Avatar
-        name={user?.full_name ?? '?'}
-        color={user?.color ?? COLORS.blue}
-        size="small"
-        imageUrl={user?.avatar_url}
-      />
-    </TouchableOpacity>
+      <Animated.View
+        style={{
+          width: 36,
+          height: 36,
+          borderRadius: 18,
+          alignItems: 'center',
+          justifyContent: 'center',
+          transform: [{ scale: scaleAnim }],
+          opacity: opacityAnim,
+        }}
+      >
+        <Avatar
+          name={user?.full_name ?? '?'}
+          color={user?.color ?? colors.blue}
+          size="small"
+          imageUrl={user?.avatar_url}
+        />
+      </Animated.View>
+    </TouchableWithoutFeedback>
   );
 }
 
@@ -145,6 +202,7 @@ function ProfileHeaderButton() {
 // ---------------------------------------------------------------------------
 
 function AuthStack() {
+  const defaultStackOptions = useStackOptions();
   return (
     <AuthStackNav.Navigator screenOptions={{ ...defaultStackOptions, headerShown: false }}>
       <AuthStackNav.Screen name="Login" component={LoginScreen} />
@@ -158,6 +216,7 @@ function AuthStack() {
 // ---------------------------------------------------------------------------
 
 function DashboardStack() {
+  const defaultStackOptions = useStackOptions();
   return (
     <DashboardStackNav.Navigator screenOptions={defaultStackOptions}>
       <DashboardStackNav.Screen
@@ -180,6 +239,7 @@ function DashboardStack() {
 }
 
 function ExpensesStack() {
+  const defaultStackOptions = useStackOptions();
   return (
     <ExpensesStackNav.Navigator screenOptions={defaultStackOptions}>
       <ExpensesStackNav.Screen
@@ -210,6 +270,7 @@ function ExpensesStack() {
 }
 
 function TasksStack() {
+  const defaultStackOptions = useStackOptions();
   return (
     <TasksStackNav.Navigator screenOptions={defaultStackOptions}>
       <TasksStackNav.Screen
@@ -240,13 +301,14 @@ function TasksStack() {
 }
 
 function GroupsStack() {
+  const defaultStackOptions = useStackOptions();
   return (
     <GroupsStackNav.Navigator screenOptions={defaultStackOptions}>
       <GroupsStackNav.Screen
         name="Groups"
         component={GroupsScreen}
         options={{
-          title: 'Roommates',
+          title: 'Groups',
           headerRight: () => <ProfileHeaderButton />,
         }}
       />
@@ -270,6 +332,7 @@ function GroupsStack() {
 }
 
 function NotificationsStack() {
+  const defaultStackOptions = useStackOptions();
   return (
     <NotificationsStackNav.Navigator screenOptions={defaultStackOptions}>
       <NotificationsStackNav.Screen
@@ -294,13 +357,27 @@ function NotificationsStack() {
 // ---------------------------------------------------------------------------
 
 function MainTabs() {
+  const { isDark } = useTheme();
+  const colors = getColors(isDark);
+  
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
-        tabBarActiveTintColor: COLORS.blue,
-        tabBarInactiveTintColor: COLORS.mutedForeground,
-        tabBarStyle: styles.tabBar,
+        tabBarActiveTintColor: colors.blue,
+        tabBarInactiveTintColor: colors.mutedForeground,
+        tabBarStyle: {
+          backgroundColor: colors.card,
+          borderTopColor: colors.border,
+          borderTopWidth: 1,
+          paddingTop: 4,
+          height: 88,
+          elevation: 8,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: -2 },
+          shadowOpacity: 0.06,
+          shadowRadius: 6,
+        },
         tabBarLabelStyle: styles.tabBarLabel,
         tabBarIcon: ({ focused, color, size }) => {
           let iconName: keyof typeof Ionicons.glyphMap;
@@ -347,7 +424,7 @@ function MainTabs() {
       <Tab.Screen
         name="GroupsTab"
         component={GroupsStack}
-        options={{ title: 'Roommates' }}
+        options={{ title: 'Groups' }}
       />
       <Tab.Screen
         name="NotificationsTab"
@@ -388,18 +465,6 @@ export default function AppNavigator() {
 // ---------------------------------------------------------------------------
 
 const styles = StyleSheet.create({
-  tabBar: {
-    backgroundColor: COLORS.background,
-    borderTopColor: COLORS.border,
-    borderTopWidth: 1,
-    paddingTop: 4,
-    height: 88,
-    elevation: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-  },
   tabBarLabel: {
     fontSize: 11,
     fontWeight: '500',
