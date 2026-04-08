@@ -10,7 +10,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { COLORS, TASK_CATEGORIES } from '../../config/constants';
 import { Avatar, Badge, Card, EmptyState, FAB, LoadingScreen } from '../../components/common';
 import { useAuth } from '../../hooks/useAuth';
@@ -263,9 +263,12 @@ export default function TasksScreen() {
     }
   }, [selectedGroupId]);
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  // Reload every time the screen comes into focus (e.g. after adding a task)
+  useFocusEffect(
+    useCallback(() => {
+      loadData();
+    }, [loadData]),
+  );
 
   const loadTasks = useCallback(async () => {
     if (!selectedGroupId) return;

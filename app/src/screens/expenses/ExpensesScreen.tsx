@@ -12,7 +12,7 @@ import {
   UIManager,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { COLORS, EXPENSE_CATEGORIES } from '../../config/constants';
 import { Avatar, Badge, Card, EmptyState, FAB, LoadingScreen } from '../../components/common';
 import { getExpenses } from '../../services/expenseService';
@@ -66,9 +66,12 @@ export default function ExpensesScreen() {
     }
   }, [selectedGroup]);
 
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
+  // Reload every time the screen comes into focus (e.g. after adding an expense)
+  useFocusEffect(
+    useCallback(() => {
+      loadData();
+    }, [loadData]),
+  );
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
