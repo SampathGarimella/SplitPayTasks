@@ -237,7 +237,7 @@ export default function TasksScreen() {
   // Filters
   const [filterCategory, setFilterCategory] = useState<FilterCategory>('all');
   const [filterAssignee, setFilterAssignee] = useState<FilterAssignee>('all');
-  const [showFilters, setShowFilters] = useState(false);
+  const showFilters = true; // Always show filters
 
   // ----------------------------------------------------------
   // Load data
@@ -379,23 +379,6 @@ export default function TasksScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Tasks</Text>
-        <View style={styles.headerActions}>
-          <TouchableOpacity
-            onPress={() => setShowFilters(!showFilters)}
-            style={styles.headerButton}
-          >
-            <Ionicons
-              name="filter"
-              size={20}
-              color={showFilters ? COLORS.blue : COLORS.mutedForeground}
-            />
-          </TouchableOpacity>
-        </View>
-      </View>
-
       {/* Group selector */}
       {groups.length > 1 && (
         <ScrollView
@@ -430,11 +413,7 @@ export default function TasksScreen() {
         <View style={styles.filterBar}>
           {/* Category filters */}
           <Text style={styles.filterLabel}>Category</Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.filterRow}
-          >
+          <View style={styles.filterRow}>
             <FilterPill
               label="All"
               active={filterCategory === 'all'}
@@ -448,29 +427,29 @@ export default function TasksScreen() {
                 onPress={() => setFilterCategory(c.value)}
               />
             ))}
-          </ScrollView>
+          </View>
 
           {/* Assignee filters */}
-          <Text style={[styles.filterLabel, { marginTop: 10 }]}>Assignee</Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.filterRow}
-          >
-            <FilterPill
-              label="All"
-              active={filterAssignee === 'all'}
-              onPress={() => setFilterAssignee('all')}
-            />
-            {members.map((m) => (
-              <FilterPill
-                key={m.id}
-                label={m.full_name}
-                active={filterAssignee === m.id}
-                onPress={() => setFilterAssignee(m.id)}
-              />
-            ))}
-          </ScrollView>
+          {members.length > 0 && (
+            <>
+              <Text style={[styles.filterLabel, { marginTop: 10 }]}>Assignee</Text>
+              <View style={styles.filterRow}>
+                <FilterPill
+                  label="All"
+                  active={filterAssignee === 'all'}
+                  onPress={() => setFilterAssignee('all')}
+                />
+                {members.map((m) => (
+                  <FilterPill
+                    key={m.id}
+                    label={m.full_name}
+                    active={filterAssignee === m.id}
+                    onPress={() => setFilterAssignee(m.id)}
+                  />
+                ))}
+              </View>
+            </>
+          )}
         </View>
       )}
 
@@ -549,32 +528,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 60,
-    paddingBottom: 12,
-  },
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: COLORS.primary,
-  },
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  headerButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: COLORS.secondary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
 
   // Group selector
   groupSelector: {
@@ -616,6 +569,8 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   filterRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 6,
     paddingBottom: 4,
   },

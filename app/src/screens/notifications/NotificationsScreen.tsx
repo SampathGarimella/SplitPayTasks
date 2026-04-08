@@ -211,22 +211,23 @@ export default function NotificationsScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Notifications</Text>
-        <View style={styles.headerActions}>
+      {/* Action bar */}
+      {(hasUnread || hasRead) && (
+        <View style={styles.actionBar}>
           {hasUnread && (
-            <TouchableOpacity onPress={handleMarkAllAsRead} style={styles.headerButton}>
-              <Ionicons name="checkmark-done" size={20} color={COLORS.blue} />
+            <TouchableOpacity onPress={handleMarkAllAsRead} style={styles.actionButton}>
+              <Ionicons name="checkmark-done" size={16} color={COLORS.blue} />
+              <Text style={styles.actionButtonText}>Mark all read</Text>
             </TouchableOpacity>
           )}
           {hasRead && (
-            <TouchableOpacity onPress={handleClearAll} style={styles.headerButton}>
-              <Ionicons name="trash-outline" size={20} color={COLORS.mutedForeground} />
+            <TouchableOpacity onPress={handleClearAll} style={styles.actionButton}>
+              <Ionicons name="trash-outline" size={16} color={COLORS.mutedForeground} />
+              <Text style={[styles.actionButtonText, { color: COLORS.mutedForeground }]}>Clear read</Text>
             </TouchableOpacity>
           )}
         </View>
-      </View>
+      )}
 
       {/* Empty state */}
       {notifications.length === 0 ? (
@@ -275,31 +276,29 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
   },
-  header: {
+  actionBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 60,
-    paddingBottom: 12,
+    justifyContent: 'flex-end',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    gap: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
   },
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: COLORS.primary,
-  },
-  headerActions: {
+  actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-  },
-  headerButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 16,
     backgroundColor: COLORS.secondary,
-    alignItems: 'center',
-    justifyContent: 'center',
+  },
+  actionButtonText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: COLORS.blue,
   },
 
   // List

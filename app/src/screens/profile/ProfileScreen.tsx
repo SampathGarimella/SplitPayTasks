@@ -141,11 +141,6 @@ export default function ProfileScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Profile</Text>
-      </View>
-
       {/* Avatar section */}
       <View style={styles.avatarSection}>
         <TouchableOpacity onPress={handlePickAvatar} style={styles.avatarContainer}>
@@ -318,17 +313,6 @@ const styles = StyleSheet.create({
   contentContainer: {
     paddingBottom: 100,
   },
-  header: {
-    paddingHorizontal: 20,
-    paddingTop: 60,
-    paddingBottom: 12,
-  },
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: COLORS.primary,
-  },
-
   // Avatar
   avatarSection: {
     alignItems: 'center',

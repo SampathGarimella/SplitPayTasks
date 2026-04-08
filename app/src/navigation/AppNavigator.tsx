@@ -1,12 +1,12 @@
 import React from 'react';
-import { StyleSheet } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
+import { StyleSheet, TouchableOpacity } from 'react-native';
+import { NavigationContainer, useNavigation } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../config/constants';
 import { useAuth } from '../hooks/useAuth';
-import { LoadingScreen } from '../components/common';
+import { LoadingScreen, Avatar } from '../components/common';
 
 // Auth screens
 import LoginScreen from '../screens/auth/LoginScreen';
@@ -48,6 +48,7 @@ export type AuthStackParamList = {
 export type DashboardStackParamList = {
   Dashboard: undefined;
   GroupDetail: { groupId: string };
+  Profile: undefined;
 };
 
 export type ExpensesStackParamList = {
@@ -55,25 +56,25 @@ export type ExpensesStackParamList = {
   AddExpense: { groupId?: string } | undefined;
   ExpenseDetail: { expenseId: string };
   Balances: { groupId?: string } | undefined;
+  Profile: undefined;
 };
 
 export type TasksStackParamList = {
   Tasks: undefined;
   AddTask: { groupId?: string; taskId?: string; editMode?: boolean } | undefined;
   TaskDetail: { taskId: string; groupId?: string };
+  Profile: undefined;
 };
 
 export type GroupsStackParamList = {
   Groups: undefined;
   CreateGroup: { groupId?: string; editing?: boolean } | undefined;
   GroupDetail: { groupId: string };
+  Profile: undefined;
 };
 
 export type NotificationsStackParamList = {
   Notifications: undefined;
-};
-
-export type ProfileStackParamList = {
   Profile: undefined;
 };
 
@@ -83,7 +84,6 @@ export type MainTabParamList = {
   TasksTab: undefined;
   GroupsTab: undefined;
   NotificationsTab: undefined;
-  ProfileTab: undefined;
 };
 
 export type RootStackParamList = {
@@ -101,7 +101,6 @@ const ExpensesStackNav = createNativeStackNavigator<ExpensesStackParamList>();
 const TasksStackNav = createNativeStackNavigator<TasksStackParamList>();
 const GroupsStackNav = createNativeStackNavigator<GroupsStackParamList>();
 const NotificationsStackNav = createNativeStackNavigator<NotificationsStackParamList>();
-const ProfileStackNav = createNativeStackNavigator<ProfileStackParamList>();
 const Tab = createBottomTabNavigator<MainTabParamList>();
 const RootStack = createNativeStackNavigator<RootStackParamList>();
 
@@ -118,6 +117,30 @@ const defaultStackOptions = {
 };
 
 // ---------------------------------------------------------------------------
+// Profile header button (user avatar on top-right of every tab)
+// ---------------------------------------------------------------------------
+
+function ProfileHeaderButton() {
+  const { user } = useAuth();
+  const navigation = useNavigation<any>();
+
+  return (
+    <TouchableOpacity
+      onPress={() => navigation.navigate('Profile')}
+      activeOpacity={0.7}
+      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+    >
+      <Avatar
+        name={user?.full_name ?? '?'}
+        color={user?.color ?? COLORS.blue}
+        size="small"
+        imageUrl={user?.avatar_url}
+      />
+    </TouchableOpacity>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Auth stack
 // ---------------------------------------------------------------------------
 
@@ -131,7 +154,7 @@ function AuthStack() {
 }
 
 // ---------------------------------------------------------------------------
-// Tab stacks
+// Tab stacks — each has Profile screen + avatar in header
 // ---------------------------------------------------------------------------
 
 function DashboardStack() {
@@ -147,6 +170,11 @@ function DashboardStack() {
         component={GroupDetailScreen}
         options={{ title: 'Group' }}
       />
+      <DashboardStackNav.Screen
+        name="Profile"
+        component={ProfileScreen}
+        options={{ title: 'Profile & Settings' }}
+      />
     </DashboardStackNav.Navigator>
   );
 }
@@ -157,7 +185,10 @@ function ExpensesStack() {
       <ExpensesStackNav.Screen
         name="Expenses"
         component={ExpensesScreen}
-        options={{ title: 'Expenses' }}
+        options={{
+          title: 'Expenses',
+          headerRight: () => <ProfileHeaderButton />,
+        }}
       />
       <ExpensesStackNav.Screen
         name="AddExpense"
@@ -169,6 +200,11 @@ function ExpensesStack() {
         component={BalancesScreen}
         options={{ title: 'Balances' }}
       />
+      <ExpensesStackNav.Screen
+        name="Profile"
+        component={ProfileScreen}
+        options={{ title: 'Profile & Settings' }}
+      />
     </ExpensesStackNav.Navigator>
   );
 }
@@ -179,7 +215,10 @@ function TasksStack() {
       <TasksStackNav.Screen
         name="Tasks"
         component={TasksScreen}
-        options={{ title: 'Tasks' }}
+        options={{
+          title: 'Tasks',
+          headerRight: () => <ProfileHeaderButton />,
+        }}
       />
       <TasksStackNav.Screen
         name="AddTask"
@@ -191,6 +230,11 @@ function TasksStack() {
         component={TaskDetailScreen}
         options={{ title: 'Task' }}
       />
+      <TasksStackNav.Screen
+        name="Profile"
+        component={ProfileScreen}
+        options={{ title: 'Profile & Settings' }}
+      />
     </TasksStackNav.Navigator>
   );
 }
@@ -201,7 +245,10 @@ function GroupsStack() {
       <GroupsStackNav.Screen
         name="Groups"
         component={GroupsScreen}
-        options={{ title: 'Roommates' }}
+        options={{
+          title: 'Roommates',
+          headerRight: () => <ProfileHeaderButton />,
+        }}
       />
       <GroupsStackNav.Screen
         name="CreateGroup"
@@ -213,6 +260,11 @@ function GroupsStack() {
         component={GroupDetailScreen}
         options={{ title: 'Group' }}
       />
+      <GroupsStackNav.Screen
+        name="Profile"
+        component={ProfileScreen}
+        options={{ title: 'Profile & Settings' }}
+      />
     </GroupsStackNav.Navigator>
   );
 }
@@ -223,26 +275,22 @@ function NotificationsStack() {
       <NotificationsStackNav.Screen
         name="Notifications"
         component={NotificationsScreen}
-        options={{ title: 'Notifications' }}
+        options={{
+          title: 'Notifications',
+          headerRight: () => <ProfileHeaderButton />,
+        }}
+      />
+      <NotificationsStackNav.Screen
+        name="Profile"
+        component={ProfileScreen}
+        options={{ title: 'Profile & Settings' }}
       />
     </NotificationsStackNav.Navigator>
   );
 }
 
-function ProfileStack() {
-  return (
-    <ProfileStackNav.Navigator screenOptions={defaultStackOptions}>
-      <ProfileStackNav.Screen
-        name="Profile"
-        component={ProfileScreen}
-        options={{ title: 'Profile' }}
-      />
-    </ProfileStackNav.Navigator>
-  );
-}
-
 // ---------------------------------------------------------------------------
-// Main bottom tabs
+// Main bottom tabs — 5 tabs (no Profile tab)
 // ---------------------------------------------------------------------------
 
 function MainTabs() {
@@ -272,9 +320,6 @@ function MainTabs() {
               break;
             case 'NotificationsTab':
               iconName = focused ? 'notifications' : 'notifications-outline';
-              break;
-            case 'ProfileTab':
-              iconName = focused ? 'person' : 'person-outline';
               break;
             default:
               iconName = 'ellipse';
@@ -308,11 +353,6 @@ function MainTabs() {
         name="NotificationsTab"
         component={NotificationsStack}
         options={{ title: 'Notifications' }}
-      />
-      <Tab.Screen
-        name="ProfileTab"
-        component={ProfileStack}
-        options={{ title: 'Profile' }}
       />
     </Tab.Navigator>
   );
@@ -364,16 +404,5 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '500',
     marginBottom: 6,
-  },
-  placeholder: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.background,
-  },
-  placeholderText: {
-    fontSize: 18,
-    color: COLORS.mutedForeground,
-    fontWeight: '500',
   },
 });

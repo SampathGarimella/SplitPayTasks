@@ -249,11 +249,7 @@ export default function ExpensesScreen() {
       )}
 
       {/* Category filter chips */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.filterChips}
-      >
+      <View style={styles.filterChips}>
         <TouchableOpacity
           style={[styles.filterChip, activeFilter === 'all' && styles.filterChipActive]}
           onPress={() => setActiveFilter('all')}
@@ -297,7 +293,7 @@ export default function ExpensesScreen() {
             </TouchableOpacity>
           );
         })}
-      </ScrollView>
+      </View>
 
       {/* Expense list */}
       <FlatList
@@ -372,7 +368,9 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: 12,
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
+    gap: 8,
   },
   filterChip: {
     flexDirection: 'row',
@@ -381,7 +379,6 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 20,
     backgroundColor: COLORS.secondary,
-    marginRight: 8,
     borderWidth: 1,
     borderColor: 'transparent',
   },
