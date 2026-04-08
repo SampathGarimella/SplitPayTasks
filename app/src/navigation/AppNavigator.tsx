@@ -59,13 +59,13 @@ export type ExpensesStackParamList = {
 
 export type TasksStackParamList = {
   Tasks: undefined;
-  AddTask: { groupId?: string } | undefined;
-  TaskDetail: { taskId: string };
+  AddTask: { groupId?: string; taskId?: string; editMode?: boolean } | undefined;
+  TaskDetail: { taskId: string; groupId?: string };
 };
 
 export type GroupsStackParamList = {
   Groups: undefined;
-  CreateGroup: undefined;
+  CreateGroup: { groupId?: string; editing?: boolean } | undefined;
   GroupDetail: { groupId: string };
 };
 
@@ -83,6 +83,7 @@ export type MainTabParamList = {
   TasksTab: undefined;
   GroupsTab: undefined;
   NotificationsTab: undefined;
+  ProfileTab: undefined;
 };
 
 export type RootStackParamList = {
@@ -100,6 +101,7 @@ const ExpensesStackNav = createNativeStackNavigator<ExpensesStackParamList>();
 const TasksStackNav = createNativeStackNavigator<TasksStackParamList>();
 const GroupsStackNav = createNativeStackNavigator<GroupsStackParamList>();
 const NotificationsStackNav = createNativeStackNavigator<NotificationsStackParamList>();
+const ProfileStackNav = createNativeStackNavigator<ProfileStackParamList>();
 const Tab = createBottomTabNavigator<MainTabParamList>();
 const RootStack = createNativeStackNavigator<RootStackParamList>();
 
@@ -227,6 +229,18 @@ function NotificationsStack() {
   );
 }
 
+function ProfileStack() {
+  return (
+    <ProfileStackNav.Navigator screenOptions={defaultStackOptions}>
+      <ProfileStackNav.Screen
+        name="Profile"
+        component={ProfileScreen}
+        options={{ title: 'Profile' }}
+      />
+    </ProfileStackNav.Navigator>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Main bottom tabs
 // ---------------------------------------------------------------------------
@@ -258,6 +272,9 @@ function MainTabs() {
               break;
             case 'NotificationsTab':
               iconName = focused ? 'notifications' : 'notifications-outline';
+              break;
+            case 'ProfileTab':
+              iconName = focused ? 'person' : 'person-outline';
               break;
             default:
               iconName = 'ellipse';
@@ -291,6 +308,11 @@ function MainTabs() {
         name="NotificationsTab"
         component={NotificationsStack}
         options={{ title: 'Notifications' }}
+      />
+      <Tab.Screen
+        name="ProfileTab"
+        component={ProfileStack}
+        options={{ title: 'Profile' }}
       />
     </Tab.Navigator>
   );

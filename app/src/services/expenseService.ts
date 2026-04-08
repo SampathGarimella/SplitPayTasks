@@ -97,10 +97,10 @@ async function getExpense(id: string): Promise<Expense> {
     .from('expenses')
     .select(`
       *,
-      payer:users!expenses_paid_by_fkey(*),
+      payer:profiles!expenses_paid_by_fkey(*),
       splits:expense_splits(
         *,
-        user:users(*)
+        user:profiles(*)
       )
     `)
     .eq('id', id)
@@ -118,10 +118,10 @@ export async function getExpenses(groupId: string): Promise<Expense[]> {
     .from('expenses')
     .select(`
       *,
-      payer:users!expenses_paid_by_fkey(*),
+      payer:profiles!expenses_paid_by_fkey(*),
       splits:expense_splits(
         *,
-        user:users(*)
+        user:profiles(*)
       )
     `)
     .eq('group_id', groupId)
@@ -168,7 +168,7 @@ export async function getBalances(groupId: string): Promise<Balance[]> {
   // Get all members
   const { data: members, error: memError } = await supabase
     .from('group_members')
-    .select('user_id, user:users(*)')
+    .select('user_id, user:profiles(*)')
     .eq('group_id', groupId);
 
   if (memError) throw new Error(`Failed to fetch members: ${memError.message}`);
@@ -250,7 +250,7 @@ export async function simplifyDebts(groupId: string): Promise<DebtSimplification
   // Get member user objects
   const { data: members } = await supabase
     .from('group_members')
-    .select('user_id, user:users(*)')
+    .select('user_id, user:profiles(*)')
     .eq('group_id', groupId);
 
   const userMap = new Map(
@@ -302,8 +302,8 @@ export async function createSettlement(
     })
     .select(`
       *,
-      from_user:users!settlements_from_user_id_fkey(*),
-      to_user:users!settlements_to_user_id_fkey(*)
+      from_user:profiles!settlements_from_user_id_fkey(*),
+      to_user:profiles!settlements_to_user_id_fkey(*)
     `)
     .single();
 
@@ -319,8 +319,8 @@ export async function getSettlements(groupId: string): Promise<Settlement[]> {
     .from('settlements')
     .select(`
       *,
-      from_user:users!settlements_from_user_id_fkey(*),
-      to_user:users!settlements_to_user_id_fkey(*)
+      from_user:profiles!settlements_from_user_id_fkey(*),
+      to_user:profiles!settlements_to_user_id_fkey(*)
     `)
     .eq('group_id', groupId)
     .order('created_at', { ascending: false });

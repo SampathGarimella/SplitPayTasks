@@ -50,7 +50,7 @@ export async function createTask(task: CreateTaskInput): Promise<Task> {
     })
     .select(`
       *,
-      assignee:users!tasks_assigned_to_fkey(*)
+      assignee:profiles!tasks_assigned_to_fkey(*)
     `)
     .single();
 
@@ -70,7 +70,7 @@ export async function getTasks(groupId: string): Promise<Task[]> {
     .from('tasks')
     .select(`
       *,
-      assignee:users!tasks_assigned_to_fkey(*)
+      assignee:profiles!tasks_assigned_to_fkey(*)
     `)
     .eq('group_id', groupId)
     .order('due_date', { ascending: true, nullsFirst: false })
@@ -114,7 +114,7 @@ export async function updateTask(
     .eq('id', id)
     .select(`
       *,
-      assignee:users!tasks_assigned_to_fkey(*)
+      assignee:profiles!tasks_assigned_to_fkey(*)
     `)
     .single();
 
@@ -166,7 +166,7 @@ export async function completeTask(id: string): Promise<Task> {
     .eq('id', id)
     .select(`
       *,
-      assignee:users!tasks_assigned_to_fkey(*)
+      assignee:profiles!tasks_assigned_to_fkey(*)
     `)
     .single();
 
@@ -246,7 +246,7 @@ export async function skipTask(id: string): Promise<Task> {
     .eq('id', id)
     .select(`
       *,
-      assignee:users!tasks_assigned_to_fkey(*)
+      assignee:profiles!tasks_assigned_to_fkey(*)
     `)
     .single();
 
@@ -289,7 +289,7 @@ export async function rotateTask(taskId: string): Promise<Task> {
     .eq('id', taskId)
     .select(`
       *,
-      assignee:users!tasks_assigned_to_fkey(*)
+      assignee:profiles!tasks_assigned_to_fkey(*)
     `)
     .single();
 

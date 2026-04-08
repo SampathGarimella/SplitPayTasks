@@ -225,7 +225,12 @@ export default function GroupDetailScreen() {
       <View style={styles.quickActions}>
         <TouchableOpacity
           style={styles.quickAction}
-          onPress={() => navigation.navigate('AddExpense', { groupId: group.id })}
+          onPress={() =>
+            navigation.getParent()?.navigate('ExpensesTab', {
+              screen: 'AddExpense',
+              params: { groupId: group.id },
+            })
+          }
         >
           <View style={[styles.quickActionIcon, { backgroundColor: COLORS.blue + '1A' }]}>
             <Ionicons name="receipt-outline" size={22} color={COLORS.blue} />
@@ -235,7 +240,12 @@ export default function GroupDetailScreen() {
 
         <TouchableOpacity
           style={styles.quickAction}
-          onPress={() => navigation.navigate('AddTask', { groupId: group.id })}
+          onPress={() =>
+            navigation.getParent()?.navigate('TasksTab', {
+              screen: 'AddTask',
+              params: { groupId: group.id },
+            })
+          }
         >
           <View style={[styles.quickActionIcon, { backgroundColor: COLORS.green + '1A' }]}>
             <Ionicons name="checkbox-outline" size={22} color={COLORS.green} />
@@ -245,7 +255,12 @@ export default function GroupDetailScreen() {
 
         <TouchableOpacity
           style={styles.quickAction}
-          onPress={() => navigation.navigate('Expenses', { groupId: group.id })}
+          onPress={() =>
+            navigation.getParent()?.navigate('ExpensesTab', {
+              screen: 'Expenses',
+              params: { groupId: group.id },
+            })
+          }
         >
           <View style={[styles.quickActionIcon, { backgroundColor: COLORS.purple + '1A' }]}>
             <Ionicons name="list-outline" size={22} color={COLORS.purple} />
@@ -255,7 +270,12 @@ export default function GroupDetailScreen() {
 
         <TouchableOpacity
           style={styles.quickAction}
-          onPress={() => navigation.navigate('Balances', { groupId: group.id })}
+          onPress={() =>
+            navigation.getParent()?.navigate('ExpensesTab', {
+              screen: 'Balances',
+              params: { groupId: group.id },
+            })
+          }
         >
           <View style={[styles.quickActionIcon, { backgroundColor: COLORS.orange + '1A' }]}>
             <Ionicons name="wallet-outline" size={22} color={COLORS.orange} />

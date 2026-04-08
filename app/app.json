@@ -29,7 +29,10 @@
       },
       "edgeToEdgeEnabled": true,
       "package": "com.splitpay.tasks",
-      "permissions": ["CAMERA", "READ_EXTERNAL_STORAGE"],
+      "permissions": [
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE"
+      ],
       "googleServicesFile": "./google-services.json"
     },
     "plugins": [
@@ -43,7 +46,9 @@
             "useFrameworks": "static"
           }
         }
-      ]
+      ],
+      "expo-web-browser",
+      "@react-native-community/datetimepicker"
     ],
     "extra": {
       "eas": {

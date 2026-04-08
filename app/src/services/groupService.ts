@@ -71,7 +71,7 @@ export async function getGroups(): Promise<GroupWithMembers[]> {
       *,
       members:group_members(
         *,
-        user:users(*)
+        user:profiles(*)
       )
     `)
     .in('id', groupIds)
@@ -92,7 +92,7 @@ export async function getGroup(id: string): Promise<GroupWithMembers> {
       *,
       members:group_members(
         *,
-        user:users(*)
+        user:profiles(*)
       )
     `)
     .eq('id', id)

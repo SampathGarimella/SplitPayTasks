@@ -1,13 +1,8 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
 import { Alert, Platform } from 'react-native';
 import { Session, AuthChangeEvent } from '@supabase/supabase-js';
-import * as WebBrowser from 'expo-web-browser';
-import * as Google from 'expo-auth-session/providers/google';
-import * as AppleAuthentication from 'expo-apple-authentication';
 import { supabase } from '../config/supabase';
 import type { User } from '../types';
-
-WebBrowser.maybeCompleteAuthSession();
 
 // ============================================================
 // Auth Context Types
@@ -28,9 +23,21 @@ interface AuthContextValue extends AuthState {
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
   updateProfile: (updates: Partial<Pick<User, 'full_name' | 'avatar_url' | 'color'>>) => Promise<void>;
+  googleEnabled: boolean;
+  appleEnabled: boolean;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+
+// ============================================================
+// Config checks
+// ============================================================
+
+const GOOGLE_IOS_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID;
+const GOOGLE_ANDROID_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID;
+const GOOGLE_WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
+const GOOGLE_ENABLED = !!(GOOGLE_IOS_CLIENT_ID || GOOGLE_ANDROID_CLIENT_ID || GOOGLE_WEB_CLIENT_ID);
+const APPLE_ENABLED = Platform.OS === 'ios';
 
 // ============================================================
 // Random color for new profiles
@@ -52,13 +59,12 @@ function getRandomColor(): string {
 
 async function fetchProfile(userId: string): Promise<User | null> {
   const { data, error } = await supabase
-    .from('users')
+    .from('profiles')
     .select('*')
     .eq('id', userId)
     .single();
 
   if (error) {
-    // Profile may not exist yet
     if (error.code === 'PGRST116') return null;
     console.error('Error fetching profile:', error.message);
     return null;
@@ -71,11 +77,17 @@ async function ensureProfile(
   email: string,
   fullName?: string,
   avatarUrl?: string | null,
-): Promise<User> {
+): Promise<User | null> {
   const existing = await fetchProfile(userId);
   if (existing) return existing;
 
-  const newProfile: Partial<User> = {
+  // Profile might be auto-created by the DB trigger — wait a moment and retry
+  await new Promise((r) => setTimeout(r, 500));
+  const retried = await fetchProfile(userId);
+  if (retried) return retried;
+
+  // Manual insert as fallback
+  const newProfile = {
     id: userId,
     email,
     full_name: fullName || email.split('@')[0],
@@ -84,7 +96,7 @@ async function ensureProfile(
   };
 
   const { data, error } = await supabase
-    .from('users')
+    .from('profiles')
     .insert(newProfile)
     .select()
     .single();
@@ -93,7 +105,8 @@ async function ensureProfile(
     // Race condition: profile may have been created concurrently
     const retry = await fetchProfile(userId);
     if (retry) return retry;
-    throw new Error(`Failed to create profile: ${error.message}`);
+    console.error('Failed to create profile:', error.message);
+    return null;
   }
 
   return data as User;
@@ -107,16 +120,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<AuthState>({
     session: null,
     user: null,
-    loading: true,
+    loading: false,
     initialized: false,
-  });
-
-  // Google OAuth config
-  const [, googleResponse, googlePromptAsync] = Google.useAuthRequest({
-    expoClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID,
-    iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
-    androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
-    webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
   });
 
   // ----------------------------------------------------------
@@ -125,13 +130,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const handleSession = useCallback(async (session: Session | null) => {
     if (!session?.user) {
-      setState((prev) => ({
-        ...prev,
+      setState({
         session: null,
         user: null,
         loading: false,
         initialized: true,
-      }));
+      });
       return;
     }
 
@@ -151,13 +155,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
     } catch (err) {
       console.error('Error handling session:', err);
-      setState((prev) => ({
-        ...prev,
+      setState({
         session,
         user: null,
         loading: false,
         initialized: true,
-      }));
+      });
     }
   }, []);
 
@@ -166,12 +169,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // ----------------------------------------------------------
 
   useEffect(() => {
-    // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       handleSession(session);
     });
 
-    // Listen for changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event: AuthChangeEvent, session: Session | null) => {
         handleSession(session);
@@ -182,27 +183,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       subscription.unsubscribe();
     };
   }, [handleSession]);
-
-  // ----------------------------------------------------------
-  // Handle Google OAuth response
-  // ----------------------------------------------------------
-
-  useEffect(() => {
-    if (googleResponse?.type === 'success') {
-      const { id_token } = googleResponse.params;
-      setState((prev) => ({ ...prev, loading: true }));
-
-      supabase.auth
-        .signInWithIdToken({ provider: 'google', token: id_token })
-        .then(({ error }) => {
-          if (error) {
-            Alert.alert('Google Sign-In Failed', error.message);
-            setState((prev) => ({ ...prev, loading: false }));
-          }
-          // Session will be handled by onAuthStateChange
-        });
-    }
-  }, [googleResponse]);
 
   // ----------------------------------------------------------
   // Auth methods
@@ -220,7 +200,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
 
       if (error) throw error;
-      // If email confirmation is required, notify user
       Alert.alert(
         'Check Your Email',
         'We sent a confirmation link to your email address. Please verify to continue.',
@@ -236,7 +215,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
-      // Session will be handled by onAuthStateChange
     } catch (err: any) {
       setState((prev) => ({ ...prev, loading: false }));
       throw err;
@@ -244,18 +222,53 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signInWithGoogle = useCallback(async () => {
+    if (!GOOGLE_ENABLED) {
+      Alert.alert('Not Configured', 'Google Sign-In is not configured yet. Please use email/password.');
+      return;
+    }
+
     setState((prev) => ({ ...prev, loading: true }));
     try {
-      const result = await googlePromptAsync();
-      if (result?.type !== 'success') {
-        setState((prev) => ({ ...prev, loading: false }));
+      const { makeRedirectUri } = await import('expo-auth-session');
+      const { startAsync } = await import('expo-web-browser');
+
+      const redirectUri = makeRedirectUri({ scheme: 'splitpay' });
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: redirectUri,
+          skipBrowserRedirect: true,
+        },
+      });
+
+      if (error) throw error;
+      if (data?.url) {
+        const result = await startAsync({ url: data.url });
+        if (result.type === 'success' && result.url) {
+          // Extract tokens from URL
+          const url = new URL(result.url);
+          const accessToken = url.hash
+            ? new URLSearchParams(url.hash.substring(1)).get('access_token')
+            : url.searchParams.get('access_token');
+          const refreshToken = url.hash
+            ? new URLSearchParams(url.hash.substring(1)).get('refresh_token')
+            : url.searchParams.get('refresh_token');
+
+          if (accessToken) {
+            await supabase.auth.setSession({
+              access_token: accessToken,
+              refresh_token: refreshToken ?? '',
+            });
+          }
+        }
       }
-      // Success case handled in the googleResponse effect
     } catch (err: any) {
+      console.error('Google sign-in error:', err);
+      Alert.alert('Sign-In Failed', err.message || 'Google sign-in failed.');
+    } finally {
       setState((prev) => ({ ...prev, loading: false }));
-      throw err;
     }
-  }, [googlePromptAsync]);
+  }, []);
 
   const signInWithApple = useCallback(async () => {
     if (Platform.OS !== 'ios') {
@@ -265,10 +278,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     setState((prev) => ({ ...prev, loading: true }));
     try {
-      const credential = await AppleAuthentication.signInAsync({
+      const AppleAuth = require('expo-apple-authentication');
+      const credential = await AppleAuth.signInAsync({
         requestedScopes: [
-          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
-          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+          AppleAuth.AppleAuthenticationScope.FULL_NAME,
+          AppleAuth.AppleAuthenticationScope.EMAIL,
         ],
       });
 
@@ -282,14 +296,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
 
       if (error) throw error;
-      // Session will be handled by onAuthStateChange
     } catch (err: any) {
-      setState((prev) => ({ ...prev, loading: false }));
       if (err.code === 'ERR_REQUEST_CANCELED') {
-        // User cancelled -- not an error
+        // User cancelled
+        setState((prev) => ({ ...prev, loading: false }));
         return;
       }
-      throw err;
+      Alert.alert('Sign-In Failed', err.message || 'Apple sign-in failed.');
+    } finally {
+      setState((prev) => ({ ...prev, loading: false }));
     }
   }, []);
 
@@ -300,7 +315,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setState((prev) => ({ ...prev, loading: false }));
       throw error;
     }
-    // State reset handled by onAuthStateChange
   }, []);
 
   const refreshProfile = useCallback(async () => {
@@ -316,7 +330,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!state.session?.user.id) throw new Error('Not authenticated');
 
       const { data, error } = await supabase
-        .from('users')
+        .from('profiles')
         .update({ ...updates, updated_at: new Date().toISOString() })
         .eq('id', state.session.user.id)
         .select()
@@ -343,6 +357,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       signOut,
       refreshProfile,
       updateProfile,
+      googleEnabled: GOOGLE_ENABLED,
+      appleEnabled: APPLE_ENABLED,
     }),
     [state, signUp, signIn, signInWithGoogle, signInWithApple, signOut, refreshProfile, updateProfile],
   );

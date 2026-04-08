@@ -19,7 +19,7 @@ import type { AuthStackParamList } from '../../navigation/AppNavigator';
 type Props = NativeStackScreenProps<AuthStackParamList, 'Login'>;
 
 export default function LoginScreen({ navigation }: Props) {
-  const { signIn, signInWithGoogle, signInWithApple, loading } = useAuth();
+  const { signIn, signInWithGoogle, signInWithApple, loading, googleEnabled, appleEnabled } = useAuth();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -148,37 +148,42 @@ export default function LoginScreen({ navigation }: Props) {
           />
         </View>
 
-        {/* Divider */}
-        <View style={styles.dividerRow}>
-          <View style={styles.dividerLine} />
-          <Text style={styles.dividerText}>or continue with</Text>
-          <View style={styles.dividerLine} />
-        </View>
+        {/* OAuth section — only show if at least one provider is configured */}
+        {(googleEnabled || appleEnabled) && (
+          <>
+            <View style={styles.dividerRow}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>or continue with</Text>
+              <View style={styles.dividerLine} />
+            </View>
 
-        {/* OAuth Buttons */}
-        <View style={styles.oauthRow}>
-          <TouchableOpacity
-            style={styles.oauthButton}
-            onPress={handleGoogle}
-            disabled={isLoading}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="logo-google" size={20} color={COLORS.primary} />
-            <Text style={styles.oauthLabel}>Google</Text>
-          </TouchableOpacity>
+            <View style={styles.oauthRow}>
+              {googleEnabled && (
+                <TouchableOpacity
+                  style={styles.oauthButton}
+                  onPress={handleGoogle}
+                  disabled={isLoading}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="logo-google" size={20} color={COLORS.primary} />
+                  <Text style={styles.oauthLabel}>Google</Text>
+                </TouchableOpacity>
+              )}
 
-          {Platform.OS === 'ios' && (
-            <TouchableOpacity
-              style={styles.oauthButton}
-              onPress={handleApple}
-              disabled={isLoading}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="logo-apple" size={20} color={COLORS.primary} />
-              <Text style={styles.oauthLabel}>Apple</Text>
-            </TouchableOpacity>
-          )}
-        </View>
+              {appleEnabled && (
+                <TouchableOpacity
+                  style={styles.oauthButton}
+                  onPress={handleApple}
+                  disabled={isLoading}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="logo-apple" size={20} color={COLORS.primary} />
+                  <Text style={styles.oauthLabel}>Apple</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </>
+        )}
 
         {/* Sign Up Link */}
         <View style={styles.footer}>

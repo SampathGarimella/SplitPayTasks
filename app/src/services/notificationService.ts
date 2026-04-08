@@ -86,7 +86,7 @@ export async function registerPushToken(token: string): Promise<void> {
   if (!user) throw new Error('Not authenticated');
 
   const { error } = await supabase
-    .from('users')
+    .from('profiles')
     .update({
       push_token: token,
       updated_at: new Date().toISOString(),

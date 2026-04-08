@@ -16,10 +16,10 @@ export async function getActivity(
   offset: number = 0,
 ): Promise<ActivityLog[]> {
   const { data, error } = await supabase
-    .from('activity_logs')
+    .from('activity_log')
     .select(`
       *,
-      user:users(*)
+      user:profiles(*)
     `)
     .eq('group_id', groupId)
     .order('created_at', { ascending: false })
@@ -43,7 +43,7 @@ export async function logActivity(
   if (!user) throw new Error('Not authenticated');
 
   const { data, error } = await supabase
-    .from('activity_logs')
+    .from('activity_log')
     .insert({
       group_id: groupId,
       user_id: user.id,
@@ -54,7 +54,7 @@ export async function logActivity(
     })
     .select(`
       *,
-      user:users(*)
+      user:profiles(*)
     `)
     .single();
 
@@ -71,10 +71,10 @@ export async function getActivityByType(
   limit: number = 50,
 ): Promise<ActivityLog[]> {
   const { data, error } = await supabase
-    .from('activity_logs')
+    .from('activity_log')
     .select(`
       *,
-      user:users(*)
+      user:profiles(*)
     `)
     .eq('group_id', groupId)
     .eq('entity_type', entityType)
@@ -93,10 +93,10 @@ export async function getActivityForEntity(
   entityId: string,
 ): Promise<ActivityLog[]> {
   const { data, error } = await supabase
-    .from('activity_logs')
+    .from('activity_log')
     .select(`
       *,
-      user:users(*)
+      user:profiles(*)
     `)
     .eq('entity_type', entityType)
     .eq('entity_id', entityId)
